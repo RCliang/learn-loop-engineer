@@ -13,7 +13,9 @@ Loop 流程：
 - 工具调用永远不抛异常（Executor 内部捕获）
 - max_turns 由 Evaluator 兜底，loop 不会无限运行
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 把整个 6 步循环隐藏在 `agent.stream()` 后面；这里每个步骤都是显式代码。
+- 关键观察：显式循环便于调试和定制，DeepAgent 封装更简洁。
 """
 from __future__ import annotations
 

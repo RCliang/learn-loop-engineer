@@ -1,6 +1,8 @@
 """LLM 配置加载 —— OpenAI 兼容端点的统一入口。
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 通过 ChatOpenAI 构造时传入相同配置；这里统一从环境变量加载。
+- 关键观察：两路使用同一套环境变量(LLM_BASE_URL/LLM_API_KEY/LLM_MODEL)。
 """
 from __future__ import annotations
 

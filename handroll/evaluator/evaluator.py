@@ -5,7 +5,9 @@
 2. loop_detect    同一 action hash 出现 ≥3 次即停止
 3. self_critique  LLM 自评（实际 Week 1 几乎不触发，因无 tool_use 时已在 loop 内停止）
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 没有内置 Evaluator；终止全靠 LLM 自己说"完成"。
+- 关键观察：这里的三层终止策略(max/loop/self_critique)提供更强保障。
 """
 from __future__ import annotations
 

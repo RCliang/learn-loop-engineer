@@ -8,7 +8,9 @@
 已知限制：cwd 限制无法阻止 LLM 通过绝对路径访问沙箱外文件。
 Phase 3 会引入容器隔离。
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 调用同一份 bash_exec.run() 工具；沙箱限制完全一致。
+- 关键观察：两路的命令执行都在 sandbox/ 目录内，超时默认 30 秒。
 """
 from __future__ import annotations
 

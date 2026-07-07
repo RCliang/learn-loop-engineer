@@ -5,7 +5,9 @@
 注意：success_criterion 直接操作磁盘（不经 sandbox 守卫），
 因为它是评估代码而非 agent 代码。
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- 任务定义两路共享，success_criterion 不依赖 agent 实现。
+- 关键观察：相同的任务定义确保两路对比的公平性。
 """
 from __future__ import annotations
 

@@ -5,7 +5,9 @@
 - 已存在文件直接覆盖
 - 通过 resolve_in_sandbox 强制路径在 sandbox/ 子树内
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 调用同一份 file_write.run() 工具；路径守卫完全一致。
+- 关键观察：两路的文件写入都经过 resolve_in_sandbox 验证路径安全性。
 """
 from __future__ import annotations
 

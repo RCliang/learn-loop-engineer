@@ -4,7 +4,9 @@
 - REACT_SYSTEM_PROMPT 在此定义（Week 3 会参数化为 cot/react/plan_and_execute）
 - 单一入口 run(task) -> RunLog，被 cli.py 调用
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 的 `agent.py` 是 100 行；这里 30 行。
+- 关键观察：差距在 loop/executor/evaluator/observation 的代码量——这里模块化更彻底。
 """
 from __future__ import annotations
 

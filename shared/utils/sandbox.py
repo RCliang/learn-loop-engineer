@@ -5,7 +5,9 @@
 - bash_exec 用 cwd=sandbox/ 启动子进程（不能完全阻止绝对路径访问，已知限制）
 - 完整容器隔离留给 Phase 3
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- 沙箱是项目级共享，DeepAgent 也走同一份工具实现，路径限制一致。
+- 关键观察：两路的文件操作都限制在 sandbox/ 目录内。
 """
 from __future__ import annotations
 

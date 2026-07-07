@@ -3,7 +3,9 @@
 设计目的：让 handroll 与 deepagent 的输出可横向对比。
 任何字段口径差异通过 notes 字段标注（如 loop_turns 的口径差异）。
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 不主动产出 RunLog；本文件是手工对齐口径的产物。
+- 关键观察：通过 notes 字段标注两路口径差异(如 loop_turns 的定义差异)。
 """
 from __future__ import annotations
 

@@ -6,7 +6,9 @@
 - 默认启用 deepagents 的 write_todos / planning，作为额外 tool_call 记录
 - 通过 agent.stream(stream_mode="updates") 事件流重构 RunLog
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- 这里的 `_ingest_event` 50 行做的事，handroll 是在 loop.py 里直接累加。
+- 关键观察：DeepAgent 通过事件流重构状态，handroll 直接在循环中更新。
 """
 from __future__ import annotations
 

@@ -5,7 +5,9 @@
 - 所有异常捕获并转为错误 payload（保险丝；工具本身不应抛异常）
 - 每次 execute 都通过 run_log.log_tool_call 记录
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 通过 `@tool` 装饰器 + ToolNode 自动调度；这里是手写 registry。
+- 关键观察：手写调度器逻辑清晰，DeepAgent 框架自动化程度更高。
 """
 from __future__ import annotations
 

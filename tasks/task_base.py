@@ -6,7 +6,9 @@
   （内部可直接检查 sandbox/ 文件系统状态，不经过 sandbox 守卫）
 - sandbox_seed 在 run 前预置文件（Week 1 暂未用到）
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 使用同一套 Task 数据类；prompt 和 success_criterion 定义共享。
+- 关键观察：任务抽象层完全共享，确保两路对比的公平性。
 """
 from __future__ import annotations
 

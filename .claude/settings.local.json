@@ -10,7 +10,18 @@
       "Bash(bash:*)",
       "Bash(git rev-parse:*)",
       "Bash(pip install:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(pytest:*)",
+      "Bash(if [ -n \"$LLM_API_KEY\" ])",
+      "Bash(then echo \"LLM_API_KEY: set \\($#LLM_API_KEY chars\\)\")",
+      "Bash(else echo \"LLM_API_KEY: not set\")",
+      "Bash(fi)",
+      "Bash(if [ -n \"$LLM_BASE_URL\" ])",
+      "Bash(then echo \"LLM_BASE_URL: $LLM_BASE_URL\")",
+      "Bash(else echo \"LLM_BASE_URL: not set\")",
+      "Bash(if [ -n \"$LLM_MODEL\" ])",
+      "Bash(then echo \"LLM_MODEL: $LLM_MODEL\")",
+      "Bash(else echo \"LLM_MODEL: not set\")"
     ]
   }
 }

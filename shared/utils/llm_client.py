@@ -8,7 +8,9 @@ deepagent 路不直接用此客户端，而是构造一个配置了相同 base_u
 - tools 参数透传给 OpenAI tools API
 - 返回 (response, input_tokens, output_tokens)，token 从 response.usage 提取
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 用 `langchain_openai.ChatOpenAI`；这里直接用 `openai` SDK。
+- 关键观察：底层是同一个端点，API 调用格式一致。
 """
 from __future__ import annotations
 

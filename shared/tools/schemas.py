@@ -7,7 +7,9 @@
 两套形式共享相同的 name/description/input_schema，
 通过 to_langchain_tool(schema, fn) 派生保证一致。
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 通过 `to_langchain_tool` 包装成 StructuredTool；两路共享此处的 schema dict。
+- 关键观察：工具描述(name/description/input_schema)完全一致，保证对比公平。
 """
 from __future__ import annotations
 

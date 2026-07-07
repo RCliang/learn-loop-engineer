@@ -4,7 +4,9 @@
 - structured（默认）：每工具一个对齐模板，错误统一前缀 [错误]
 - raw：直接 json.dumps（Week 2 做 A/B 对比时启用）
 
-【和 DeepAgent 的对比】（Task 18 补全）
+【和 DeepAgent 的对比】
+- DeepAgent 自动把 ToolMessage 反馈给模型；这里手动 format + 追加 messages。
+- 关键观察：手动格式化便于观察和控制反馈内容。
 """
 from __future__ import annotations
 
