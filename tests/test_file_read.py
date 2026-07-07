@@ -1,9 +1,5 @@
 from shared.tools.file_read import run
-from shared.utils.sandbox import SANDBOX_DIR, reset_sandbox
-
-
-def setup_function():
-    reset_sandbox()
+from shared.utils.sandbox import SANDBOX_DIR
 
 
 def test_read_existing_file():

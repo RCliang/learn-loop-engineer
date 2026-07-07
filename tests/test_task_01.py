@@ -3,10 +3,6 @@ from tasks.benchmark.task_01_simple_script import TASK, success
 from shared.utils.sandbox import SANDBOX_DIR, reset_sandbox
 
 
-def setup_function():
-    reset_sandbox()
-
-
 def test_task_registered():
     assert "task_01_simple_script" in TASKS
     assert TASKS["task_01_simple_script"] is TASK

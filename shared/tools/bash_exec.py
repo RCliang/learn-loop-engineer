@@ -55,8 +55,8 @@ def run(command: str, timeout: int = 30) -> dict:
             "ok": False,
             "error_type": "TimeoutExpired",
             "message": f"超时 {timeout}s",
-            "stdout": e.stdout or "" if isinstance(e.stdout, str) else "",
-            "stderr": e.stderr or "" if isinstance(e.stderr, str) else "",
+            "stdout": e.stdout if isinstance(e.stdout, str) else "",
+            "stderr": e.stderr if isinstance(e.stderr, str) else "",
             "exit_code": -1,
             "duration_s": round(time.time() - start, 3),
         }

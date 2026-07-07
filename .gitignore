@@ -9,3 +9,5 @@ sandbox/*
 outputs/runs/*
 !outputs/runs/.gitkeep
 tmpclaude-*
+.claude/
+*.egg-info/

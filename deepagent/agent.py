@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 import time
-from typing import Any
 
 from rich import print as rprint
 
