@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(superpowers:brainstorming)",
+      "Bash(git -C E:/2026projects/loop-engineer log --oneline -20)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\ndocs: add Week 1 design spec for loop-engineer\n\nDesigns the minimal viable Week 1: handroll + deepagent paths both\nrunning task_01_simple_script with matching RunLog output.\n\nKey decisions captured:\n- LLM via OpenAI-compatible API \\(configurable base_url/model\\)\n- deepagents library with our 3 custom tools \\(apples-to-apples\\)\n- Working-directory sandbox \\(sandbox/ prefix\\)\n- Mirror PLAN.md directory structure exactly\n- Rewrite existing root files for learning depth\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Bash(bash:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)"
+    ]
+  }
+}
