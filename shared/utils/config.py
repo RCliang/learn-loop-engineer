@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from dotenv import load_dotenv
+
 
 @dataclass
 class LLMConfig:
@@ -21,7 +23,11 @@ _REQUIRED = ("LLM_BASE_URL", "LLM_API_KEY", "LLM_MODEL")
 
 
 def load_env() -> LLMConfig:
-    """从环境变量读取 LLM 配置。缺失则抛 RuntimeError。"""
+    """从 .env 文件（若存在）+ 环境变量读取 LLM 配置。缺失则抛 RuntimeError。
+
+    load_dotenv 默认 override=False：已存在的环境变量优先，.env 只填充空缺。
+    """
+    load_dotenv()
     missing = [k for k in _REQUIRED if not os.getenv(k)]
     if missing:
         raise RuntimeError(f"missing env vars: {missing}")
