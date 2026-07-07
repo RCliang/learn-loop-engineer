@@ -98,21 +98,20 @@ def run_loop(task, system_prompt: str, run_log: RunLog, max_turns: int = 15) -> 
         ]
         messages.append(assistant_msg)
 
-        # ⑤ 执行所有工具、格式化、作为 user 消息追加
-        tool_results_for_api = []
+        # ⑤ 执行所有工具、格式化、作为 tool 消息追加（OpenAI tools-API 规范）
+        # 每个 tool_call 对应一条独立的 role=tool 消息，引用 tool_call_id
         last_action = None
         for tc in tool_calls:
             rprint(f"[yellow]→ 工具调用：{tc['name']}({tc['input']})[/yellow]")
             obs = execute_tool(tc["name"], tc["input"], run_log)
             formatted = format_observation(tc["name"], tc["input"], obs)
             rprint(f"[dim]{formatted[:200]}[/dim]")
-            tool_results_for_api.append({
+            messages.append({
                 "role": "tool",
                 "tool_call_id": tc["id"],
                 "content": formatted,
             })
             last_action = {"name": tc["name"], "input": tc["input"]}
-        messages.append({"role": "user", "content": tool_results_for_api})
 
         # ⑥ Evaluator
         should_stop, reason = evaluator.should_stop(
