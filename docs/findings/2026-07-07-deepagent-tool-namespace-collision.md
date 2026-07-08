@@ -1,23 +1,23 @@
-# Deepagent Tool Namespace Collision — Why `bash_exec` Kept "Failing"
+# Deepagent 工具命名空间冲突 —— 为什么 `bash_exec` 一直"失败"
 
-**Date:** 2026-07-07
-**Task:** `task_01_simple_script` (create `sandbox/hello.py`, run, verify "hello world")
-**Trigger:** First live side-by-side run of `python -m cli run --agent both --task task_01_simple_script`
+**日期：** 2026-07-07
+**任务：** `task_01_simple_script`（创建 `sandbox/hello.py`，运行，验证输出 "hello world"）
+**触发场景：** 第一次真实并行运行 `python -m cli run --agent both --task task_01_simple_script`
 
 ## TL;DR
 
-`create_deep_agent` injects **8 built-in tools** alongside the 3 we passed in, creating **3 overlapping name pairs** (`write_file`/`file_write`, `read_file`/`file_read`, `execute`/`bash_exec`). The model picks the alphabetically-first `write_file`, which uses a different schema (`file_path` vs `path`) and a different CWD convention than our sandboxed `bash_exec`. The resulting CWD mismatch causes 5 bash attempts before the model stumbles onto the right relative path. Handroll has no such issue because it exposes only the 3 shared tools.
+`create_deep_agent` 在我们传入的 3 个工具之外，**强制注入了 9 个内置工具**，形成 **3 对命名冲突**（`write_file`/`file_write`、`read_file`/`file_read`、`execute`/`bash_exec`）。模型按字母序优先选了 `write_file`（内置），它用的是不同的 schema（`file_path` vs `path`）和不同的 CWD 约定，与我们沙箱化的 `bash_exec` 产生冲突。CWD 错位导致模型尝试 5 次 bash 才偶然找到正确的相对路径。handroll 路只暴露这 3 个共享工具，完全没有这个问题。
 
-## Observation
+## 观察现象
 
-Run `python -m cli run --agent both --task task_01_simple_script`. Both paths succeed, but their RunLogs look very different:
+运行 `python -m cli run --agent both --task task_01_simple_script`。两条路径都成功，但 RunLog 长相天差地别：
 
 | agent     | success | turns | in_tokens | out_tokens | duration_s |
 |-----------|---------|-------|-----------|------------|------------|
 | handroll  | True    | 3     | 2413      | 282        | 9.48       |
 | deepagent | True    | 21    | 47202     | 563        | 12.64      |
 
-`loop_turns` is ~7x, `in_tokens` is ~20x. The task is "create hello.py and run it" — there is no reason for 21 turns. The deepagent `tool_calls` trace tells the story:
+`loop_turns` 差了约 7 倍，`in_tokens` 差了约 20 倍。任务内容是"创建 hello.py 并运行"——根本不需要 21 轮。deepagent 的 `tool_calls` 轨迹讲清了故事：
 
 ```json
 "tool_calls": [
@@ -30,66 +30,66 @@ Run `python -m cli run --agent both --task task_01_simple_script`. Both paths su
 ]
 ```
 
-Five `bash_exec` attempts for a one-line file. The handroll trace is clean — one `file_write`, one `bash_exec`, done.
+一个一行的文件，5 次 `bash_exec` 尝试。handroll 轨迹干净利落——一次 `file_write`、一次 `bash_exec`、完成。
 
-## Evidence: What the Model Actually Sees
+## 证据：模型实际看到什么
 
-Inspecting the ToolNode of the compiled graph (`agent.get_graph().nodes["tools"]`) reveals **12 tools total**: 9 deepagents built-ins + 3 of ours.
+检查编译图的 ToolNode（`agent.get_graph().nodes["tools"]`），可以看到**总共 12 个工具**：9 个 deepagents 内置 + 3 个我们的。
 
-### Full Tool Inventory
+### 完整工具清单
 
-| # | Tool | Source | Overlap | Purpose (first line of description) | Key args |
-|---|------|--------|---------|-------------------------------------|----------|
-| 1 | `write_todos` | deepagents | — | Manage a structured task list for the current session | `todos: array` |
-| 2 | `ls` | deepagents | soft overlap with `file_read` | Lists all files in a directory | `path: string` (**absolute**) |
-| 3 | `read_file` | deepagents | **name-conflicts** with our `file_read` | Reads a file from the filesystem (supports pagination, multimodal) | `file_path`, `offset`, `limit` (**absolute path**) |
-| 4 | `write_file` | deepagents | **name-conflicts** with our `file_write` | Writes to a new file in the filesystem | `file_path`, `content` (**absolute path**) |
-| 5 | `edit_file` | deepagents | — | Performs exact string replacements in files | `file_path`, `old_string`, `new_string`, `replace_all` |
-| 6 | `glob` | deepagents | — | Find files matching a glob pattern | `pattern`, `path` |
-| 7 | `grep` | deepagents | — | Search for a text pattern across files (literal, not regex) | `pattern`, `path`, `glob`, `output_mode` |
-| 8 | `execute` | deepagents | **functional overlap** with our `bash_exec` | Executes a shell command in an isolated sandbox environment | `command`, `timeout` |
-| 9 | `task` | deepagents | — | Launch an ephemeral subagent for complex multi-step tasks | `description`, `subagent_type` |
-| 10 | `bash_exec` | **OURS** | — | 在沙箱 shell（限制在 sandbox/ 工作目录）中执行命令 | `command`, `timeout` |
-| 11 | `file_read` | **OURS** | — | 读取 sandbox/ 工作目录下的文件内容 | `path`, `encoding` (**relative to sandbox**) |
-| 12 | `file_write` | **OURS** | — | 将内容写入 sandbox/ 工作目录下的文件 | `path`, `content`, `encoding` (**relative to sandbox**) |
+| # | 工具 | 来源 | 冲突情况 | 用途（描述首行） | 关键参数 |
+|---|------|------|----------|------------------|----------|
+| 1 | `write_todos` | deepagents | — | 管理当前会话的结构化任务列表 | `todos: array` |
+| 2 | `ls` | deepagents | 与 `file_read` 软重叠 | 列出目录中的所有文件 | `path: string`（**绝对路径**） |
+| 3 | `read_file` | deepagents | **命名冲突** 我们的 `file_read` | 读取文件系统中的文件（支持分页、多模态） | `file_path`、`offset`、`limit`（**绝对路径**） |
+| 4 | `write_file` | deepagents | **命名冲突** 我们的 `file_write` | 写入新文件到文件系统 | `file_path`、`content`（**绝对路径**） |
+| 5 | `edit_file` | deepagents | — | 在文件中执行精确字符串替换 | `file_path`、`old_string`、`new_string`、`replace_all` |
+| 6 | `glob` | deepagents | — | 按 glob 模式查找文件 | `pattern`、`path` |
+| 7 | `grep` | deepagents | — | 跨文件搜索文本（字面量，非正则） | `pattern`、`path`、`glob`、`output_mode` |
+| 8 | `execute` | deepagents | **功能重叠** 我们的 `bash_exec` | 在隔离沙箱环境中执行 shell 命令 | `command`、`timeout` |
+| 9 | `task` | deepagents | — | 启动临时 subagent 处理复杂多步任务 | `description`、`subagent_type` |
+| 10 | `bash_exec` | **我们的** | — | 在沙箱 shell（限制在 sandbox/ 工作目录）中执行命令 | `command`、`timeout` |
+| 11 | `file_read` | **我们的** | — | 读取 sandbox/ 工作目录下的文件内容 | `path`、`encoding`（**相对 sandbox**） |
+| 12 | `file_write` | **我们的** | — | 将内容写入 sandbox/ 工作目录下的文件 | `path`、`content`、`encoding`（**相对 sandbox**） |
 
-### Three Conflict Pairs
+### 三对冲突
 
-The collisions that actually confuse the model:
+真正让模型困惑的碰撞：
 
-| Built-in (deepagents) | Ours | Schema mismatch | Behavioral mismatch |
-|-----------------------|------|-----------------|---------------------|
-| `write_file(file_path=...)` | `file_write(path=...)` | arg name `file_path` vs `path` | built-in uses **absolute** paths from project root; ours uses **relative-to-sandbox** paths |
-| `read_file(file_path=...)` | `file_read(path=...)` | arg name `file_path` vs `path` | same as above; built-in also has `offset`/`limit` pagination we don't |
-| `execute(command=...)` | `bash_exec(command=...)` | same arg name `command` | built-in runs "in an isolated sandbox environment" (deepagents-managed); ours sets `cwd=SANDBOX_DIR` explicitly |
+| 内置（deepagents） | 我们的 | Schema 差异 | 行为差异 |
+|--------------------|--------|-------------|----------|
+| `write_file(file_path=...)` | `file_write(path=...)` | 参数名 `file_path` vs `path` | 内置用项目根的**绝对**路径；我们的用**相对 sandbox** 的路径 |
+| `read_file(file_path=...)` | `file_read(path=...)` | 参数名 `file_path` vs `path` | 同上；内置还多了我们没实现的 `offset`/`limit` 分页 |
+| `execute(command=...)` | `bash_exec(command=...)` | 参数名同为 `command` | 内置"在隔离沙箱环境运行"（deepagents 自管）；我们的显式设 `cwd=SANDBOX_DIR` |
 
-### Built-in Tool Descriptions (Full Reference)
+### 内置工具描述（完整参考）
 
-The descriptions below are verbatim from the deepagents ToolNode (captured via `agent.get_graph().nodes["tools"].data.tools_by_name[name].description`). They are useful for understanding what the model sees when reasoning about which tool to pick.
+下列描述逐字摘自 deepagents ToolNode（通过 `agent.get_graph().nodes["tools"].data.tools_by_name[name].description` 抓取）。它们有助于理解模型在选择工具时实际看到的内容。
 
-**`write_todos`** — Task-list manager. Triggers when the model thinks the task needs 3+ steps. Injects a planning phase that adds turns/tokens. (For `task_01_simple_script` this is pure overhead.)
+**`write_todos`** —— 任务清单管理器。当模型判断任务需要 3 步以上时触发，注入一个计划阶段（增加轮次/token 开销）。（对 `task_01_simple_script` 来说是纯负担。）
 
-**`ls`** — Directory listing. Args: `path` (**"Must be absolute, not relative"**). The deepagents filesystem model is rooted at the project root, NOT at our sandbox.
+**`ls`** —— 目录列表。参数：`path`（**"必须是绝对路径，不接受相对路径"**）。deepagents 的文件系统以项目根为根，**不是**我们的 sandbox/。
 
-**`read_file`** — File reader with pagination + multimodal (images/PDFs). Args: `file_path` (**"Must be absolute"**), `offset` (0-indexed line), `limit`. Returns content in `cat -n` format.
+**`read_file`** —— 文件读取，支持分页 + 多模态（图片/PDF）。参数：`file_path`（**"必须是绝对路径"**）、`offset`（0 起始行号）、`limit`。返回 `cat -n` 格式内容。
 
-**`write_file`** — File creator. Args: `file_path` (**"Must be absolute"**), `content`. Documentation explicitly says "Prefer to edit existing files (with the edit_file tool) over creating new ones when possible."
+**`write_file`** —— 文件创建器。参数：`file_path`（**"必须是绝对路径"**）、`content`。文档明确说"优先用 edit_file 编辑已有文件，而不是新建"。
 
-**`edit_file`** — String replacement editor. Requires reading the file first. Args: `file_path`, `old_string`, `new_string`, `replace_all`.
+**`edit_file`** —— 字符串替换编辑器。要求先读过文件。参数：`file_path`、`old_string`、`new_string`、`replace_all`。
 
-**`glob`** — Pattern match. Args: `pattern` (e.g. `**/*.py`), `path` (base dir).
+**`glob`** —— 模式匹配。参数：`pattern`（如 `**/*.py`）、`path`（起始目录）。
 
-**`grep`** — Literal text search (NOT regex). Args: `pattern`, `path`, `glob`, `output_mode` (`files_with_matches` | `content` | `count`).
+**`grep`** —— 字面量文本搜索（**非正则**）。参数：`pattern`、`path`、`glob`、`output_mode`（`files_with_matches` | `content` | `count`）。
 
-**`execute`** — Shell executor. Args: `command`, `timeout`. Documentation specifically says "avoid using search commands like find and grep. Instead use the grep, glob tools" and "avoid read tools like cat, head, tail, and use read_file". This is a Claude-Code-style opinionated workflow.
+**`execute`** —— shell 执行器。参数：`command`、`timeout`。文档特别强调"避免用 find、grep 这类搜索命令，改用 grep、glob 工具"以及"避免用 cat、head、tail 这类读取命令，改用 read_file"。这是 Claude Code 风格的"固化"工作流。
 
-**`task`** — Subagent spawner. Args: `description`, `subagent_type` (`general-purpose` by default). Each spawn is stateless.
+**`task`** —— subagent 生成器。参数：`description`、`subagent_type`（默认 `general-purpose`）。每次生成都是无状态的。
 
-### Summary of the Built-in Behavior Model
+### 内置工具行为模型小结
 
-All deepagents built-in filesystem tools (`ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`) **require absolute paths rooted at the project directory**. This is the opposite convention from our shared tools, which **require paths relative to `sandbox/`**. When the model mixes the two (which it will, because they look similar), the CWD assumptions collide and produce the kind of multi-attempt recovery seen in the RunLog.
+所有 deepagents 内置文件系统工具（`ls`、`read_file`、`write_file`、`edit_file`、`glob`、`grep`）**都要求以项目根为基准的绝对路径**。这与我们共享工具的约定**完全相反**——我们的工具**要求相对 `sandbox/` 的路径**。模型一旦混用（由于两者看起来很像，几乎必然混用），CWD 假设就会冲突，产生 RunLog 中那种多轮重试的现象。
 
-The deepagents library documents this in `create_deep_agent`'s docstring:
+deepagents 库在 `create_deep_agent` 的 docstring 中这样描述：
 
 > By default, this agent has access to the following tools:
 > - `write_todos`: manage a todo list
@@ -97,61 +97,61 @@ The deepagents library documents this in `create_deep_agent`'s docstring:
 > - `execute`: run shell commands
 > - `task`: call subagents
 
-There is **no `disable_default_tools` flag** in the `create_deep_agent` signature. The built-ins are always added.
+`create_deep_agent` 的签名里**没有 `disable_default_tools` 开关**，内置工具总是会被加上。
 
-## Root Cause #1 — Tool Namespace Pollution
+## 根因 #1 —— 工具命名空间污染
 
-The model sees alphabetically sorted tools. For the write step:
+模型看到的是按字母序排列的工具列表。对于"写文件"这一步：
 
 ```
 ...
-write_file   (deepagents)   ← appears first
-file_write   (ours)
+write_file   (deepagents)   ← 字母序在前，先出现
+file_write   (我们的)
 ...
 ```
 
-Both descriptions are plausible ("Writes to a new file in the filesystem" vs "将内容写入 sandbox/ 工作目录下的文件"). The model picks `write_file` — the built-in, not ours.
+两者的描述看起来都合理（"Writes to a new file in the filesystem" vs "将内容写入 sandbox/ 工作目录下的文件"）。模型选了 `write_file`——内置的那个，不是我们的。
 
-**Consequence:** The file write goes through deepagents' code path, not our `shared/tools/file_write.py`. This means:
-- Our `resolve_in_sandbox` path guard is **bypassed**
-- Our errors-as-payload dict shape is not produced
-- The model learns the wrong schema (`file_path=...` instead of `path=...`)
+**后果：** 文件写入走了 deepagents 的代码路径，不是我们的 `shared/tools/file_write.py`。这意味着：
+- 我们的 `resolve_in_sandbox` 路径守卫被**绕过**
+- 我们的 errors-as-payload dict 形状没产生
+- 模型学到了错误的 schema（`file_path=...` 而非 `path=...`）
 
-The file did get written to the right location, but only by accident: deepagents' `write_file` runs from the real project root, so relative `sandbox/hello.py` resolves to the same path our sandbox guard would have enforced.
+文件确实写到了正确的位置，但纯属巧合：deepagents 的 `write_file` 从真实项目根目录运行，所以相对路径 `sandbox/hello.py` 解析后恰好就是我们沙箱守卫强制限制的那个位置。
 
-## Root Cause #2 — CWD Context Mismatch
+## 根因 #2 —— CWD 上下文错位
 
-Our `bash_exec` runs with `cwd=SANDBOX_DIR`. The model does not know this. Its mental model of "where am I" comes from the `write_file` call that preceded it — and `write_file` ran from the project root.
+我们的 `bash_exec` 以 `cwd=SANDBOX_DIR` 运行。模型不知道这一点。它的"我在哪里"心智模型来自它之前调用的 `write_file`——而 `write_file` 是从项目根运行的。
 
-So the model reasons: *"I wrote `sandbox/hello.py` from the project root. To run it, I need to `cd sandbox` or use the path `sandbox/hello.py`."*
+于是模型推理：*"我从项目根写了 `sandbox/hello.py`。要运行它，我得 `cd sandbox` 或者用路径 `sandbox/hello.py`。"*
 
-Reality: bash is already inside `sandbox/`. Every absolute or `sandbox/`-prefixed path the model tries either doesn't exist or resolves wrong:
+现实是：bash 已经在 `sandbox/` 里面了。模型尝试的每个绝对路径或 `sandbox/` 前缀路径要么不存在、要么解析错误：
 
-| Attempt | Command | Why it fails |
-|---------|---------|--------------|
-| 1 | `cd /sandbox && python hello.py` | `/sandbox` is not a real absolute dir — `sandbox/` is relative to project root |
-| 2 | `python /sandbox/hello.py` | Same — no such file |
-| 3 | `pwd && ls` | **Debugging probe** — model discovers CWD is `sandbox/`, file is right here |
-| 4 | `python /e/2026projects/loop-engineer/sandbox/hello.py` | Absolute path resolved from sandbox CWD; Python can find it but it's ugly |
-| 5 | `python hello.py` | Finally correct — relative path from sandbox CWD |
+| 尝试 | 命令 | 失败原因 |
+|------|------|----------|
+| 1 | `cd /sandbox && python hello.py` | `/sandbox` 不是真实的绝对目录——`sandbox/` 是相对项目根的 |
+| 2 | `python /sandbox/hello.py` | 同上——文件不存在 |
+| 3 | `pwd && ls` | **调试探测**——模型发现 CWD 已经是 `sandbox/`，文件就在手边 |
+| 4 | `python /e/2026projects/loop-engineer/sandbox/hello.py` | 从 sandbox CWD 解析的绝对路径；Python 能找到但路径很难看 |
+| 5 | `python hello.py` | 终于对了——从 sandbox CWD 出发的相对路径 |
 
-Three of the five calls produce errors the model has to read and recover from. That recovery is what inflates `in_tokens` to 47k — the model is reading verbose bash error messages and re-reasoning about paths every turn.
+5 次调用中有 3 次产生错误，模型需要读取并恢复。正是这个恢复过程把 `in_tokens` 推到 47k——模型每轮都在读冗长的 bash 错误信息并重新推理路径。
 
-## Why Handroll Has No Such Issue
+## 为什么 handroll 没有这个问题
 
-The handroll path exposes exactly 3 tools, all ours:
+handroll 路径只暴露 3 个工具，全是我们的：
 
 ```
 bash_exec, file_read, file_write
 ```
 
-No naming ambiguity. The model calls `file_write(path="hello.py", ...)` — relative path, which is what our sandbox expects. Then `bash_exec(command="python hello.py")` — also relative, works on the first try because CWD is already the sandbox.
+没有命名歧义。模型调用 `file_write(path="hello.py", ...)`——相对路径，正是我们沙箱所期望的。然后 `bash_exec(command="python hello.py")`——也是相对路径，第一次就成功，因为 CWD 已经是沙箱了。
 
-The system prompt is identical between paths. The difference is purely tool surface area.
+两条路径的 system prompt 完全一致。差异**纯粹**在工具表面。
 
-## Implication: `exit_code` Is Null in All Recorded Calls
+## 含义：记录中所有调用的 `exit_code` 都是 null
 
-Our RunLog records `exit_code: null` for every deepagent tool call, even the ones that obviously errored (`cd /sandbox && python hello.py`). This is because `deepagent/agent.py:_ingest_event` only consumes `AIMessage.tool_calls` — the *request*. The actual `ToolMessage` results (containing stdout/stderr/exit_code) flow through a different LangGraph event that we currently ignore:
+我们的 RunLog 为每次 deepagent 工具调用都记录 `exit_code: null`，即便是那些明显报错的（`cd /sandbox && python hello.py`）。这是因为 `deepagent/agent.py:_ingest_event` 只消费 `AIMessage.tool_calls`——即**请求**。真正的 `ToolMessage` 结果（包含 stdout/stderr/exit_code）走的是另一条 LangGraph 事件，我们目前忽略了它：
 
 ```python
 elif msg_type == "tool":
@@ -159,45 +159,45 @@ elif msg_type == "tool":
     pass
 ```
 
-So the comparison RunLog can tell you *what the model tried* but not *what actually happened*. To see the bash errors that drove the 47k token spike, you'd need to capture `ToolMessage.content` and correct the `ok` / `exit_code` fields after the fact.
+所以对比用的 RunLog 能告诉你**模型尝试了什么**，但告诉不了你**实际发生了什么**。要看到驱动 47k token 峰值的那些 bash 错误，你需要捕获 `ToolMessage.content` 并事后校正 `ok` / `exit_code` 字段。
 
-## Week 2 Options
+## Week 2 可选方案
 
-From cheapest to most thorough:
+从最便宜到最彻底：
 
-### Option A — Augment the system prompt
+### 方案 A —— 增强 system prompt
 
-Tell the model its bash CWD is `sandbox/`, and to prefer the shared tools over the built-ins:
+告诉模型它的 bash CWD 就是 `sandbox/`，并要求优先用共享工具而非内置工具：
 
 ```
 注意：bash_exec 的当前工作目录就是 sandbox/，文件就在当前目录下，直接用相对路径。
 优先使用 file_write / file_read / bash_exec，不要使用 write_file / read_file。
 ```
 
-Cost: 2 lines in `DEEP_AGENT_SYSTEM_PROMPT`. Likely halves the bash attempts.
+成本：`DEEP_AGENT_SYSTEM_PROMPT` 里加 2 行。预期可把 bash 尝试次数减半。
 
-### Option B — Record ToolMessage results
+### 方案 B —— 记录 ToolMessage 结果
 
-In `deepagent/agent.py:_ingest_event`, handle the `elif msg_type == "tool"` branch: parse `msg.content` for exit codes / error indicators, and update the corresponding `run_log.tool_calls` entry. This won't change behavior but will make the RunLog a faithful record for comparison.
+在 `deepagent/agent.py:_ingest_event` 里处理 `elif msg_type == "tool"` 分支：从 `msg.content` 解析退出码/错误信号，更新对应的 `run_log.tool_calls` 条目。这不会改变行为，但能让 RunLog 成为一忠实的对比记录。
 
-### Option C — Filter the built-in tools
+### 方案 C —— 过滤内置工具
 
-`create_deep_agent` doesn't accept a `disable_default_tools` flag, but the compiled graph's ToolNode can be replaced post-construction:
+`create_deep_agent` 不接受 `disable_default_tools` 标志，但编译图的 ToolNode 可以在构造后替换：
 
 ```python
 agent = create_deep_agent(model=model, tools=ALL_TOOLS_AS_CALLABLES, system_prompt=...)
-# Replace the ToolNode to drop overlapping built-ins
+# 替换 ToolNode 丢弃重叠的内置工具
 keep = {"bash_exec", "file_read", "file_write", "write_todos", "task"}
 agent.tools = {n: t for n, t in agent.tools.items() if n in keep}
 ```
 
-This is fragile — it reaches into deepagents' internal structure and may break on version upgrades. But it's the only way to get a truly clean tool surface for fair comparison.
+这种方式很脆弱——它伸进了 deepagents 的内部结构，版本升级时可能失效。但这是唯一能得到真正干净工具表面、实现公平对比的办法。
 
-## Teaching Takeaway
+## 教学要点
 
-This is the concrete cost of framework abstraction made visible:
+这是把"框架抽象的成本"具象化呈现出来：
 
-- **handroll** = 3 tools, 30 lines of orchestration, model succeeds first try.
-- **deepagent** = 11 tools (3 ours + 8 framework-injected), 100 lines of wrapper, model takes 5 tries.
+- **handroll** = 3 个工具、30 行编排代码、模型一次就成功。
+- **deepagent** = 11 个工具（3 个我们的 + 8 个框架注入的）、100 行包装代码、模型试了 5 次。
 
-The framework gives you `write_todos`/planning/subagents for free — but it also gives the model 3 overlapping name pairs to disambiguate, and it doesn't tell you when its tools conflict with yours. For Week 1's purpose (see this tradeoff with your own eyes), the current behavior is the lesson.
+框架免费送你 `write_todos`/planning/subagents——但它同时塞给模型 3 对重叠的命名让它去区分，而且不会告诉你它的工具和你的冲突了。就 Week 1 的目的（亲眼看清这个权衡）而言，当前行为本身就是答案。
