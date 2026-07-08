@@ -14,9 +14,3 @@ def test_read_missing_file():
     result = run(path="nope.txt")
     assert result["ok"] is False
     assert result["error_type"] == "FileNotFoundError"
-
-
-def test_read_outside_sandbox():
-    result = run(path="../../etc/passwd")
-    assert result["ok"] is False
-    assert result["error_type"] == "PermissionError"

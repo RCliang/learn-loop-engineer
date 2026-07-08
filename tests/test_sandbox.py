@@ -1,5 +1,4 @@
 from pathlib import Path
-import pytest
 from shared.utils.sandbox import SANDBOX_DIR, resolve_in_sandbox, reset_sandbox
 
 
@@ -14,17 +13,11 @@ def test_resolve_relative_path_inside_sandbox():
     assert resolved.name == "hello.py"
 
 
-def test_resolve_absolute_path_inside_sandbox():
+def test_resolve_absolute_path_passes_through():
+    # resolve_in_sandbox 不再拦截绝对路径，只做锚定 + resolve
     abs_path = str(SANDBOX_DIR / "sub" / "file.txt")
     resolved = resolve_in_sandbox(abs_path)
     assert resolved.is_relative_to(SANDBOX_DIR)
-
-
-def test_resolve_path_outside_sandbox_raises():
-    with pytest.raises(PermissionError):
-        resolve_in_sandbox("../escape.py")
-    with pytest.raises(PermissionError):
-        resolve_in_sandbox("/etc/passwd")
 
 
 def test_reset_sandbox_clears_files():

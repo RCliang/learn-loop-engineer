@@ -1,13 +1,13 @@
-"""沙箱路径守卫 —— 把所有文件操作限制在项目根的 sandbox/ 目录下。
+"""沙箱工作区 —— agent 的统一工作目录与运行间清理。
 
-设计权衡：
-- 主防线是路径 resolve 后的前缀检查（防 `../` 逃逸）
-- bash_exec 用 cwd=sandbox/ 启动子进程（不能完全阻止绝对路径访问，已知限制）
-- 完整容器隔离留给 Phase 3
+这不是安全边界，只是工作区约定：
+- SANDBOX_DIR 是一个普通目录，agent 工具默认把相对路径锚定到这里
+- reset_sandbox 在每次 run 前清空，保证实验可重复
+- bash_exec 把子进程 cwd 设到这里，让相对命令"能用"
 
-【和 DeepAgent 的对比】
-- 沙箱是项目级共享，DeepAgent 也走同一份工具实现，路径限制一致。
-- 关键观察：两路的文件操作都限制在 sandbox/ 目录内。
+历史上这里曾有一个路径前缀检查（防 `../` 逃逸），但它是自愿式的：
+只有 file_read/file_write 调它，bash_exec 的绝对路径和 deepagents 内置工具
+都能绕过。装样子不如不装，已移除。如需真隔离，应上容器 / namespaces。
 """
 from __future__ import annotations
 
@@ -18,19 +18,12 @@ SANDBOX_DIR: Path = Path(__file__).resolve().parents[2] / "sandbox"
 
 
 def resolve_in_sandbox(rel_or_abs_path: str) -> Path:
-    """把用户提供的路径解析为 SANDBOX_DIR 下的绝对路径。
-    解析后若不在 SANDBOX_DIR 子树内，抛 PermissionError。"""
+    """把路径解析为 SANDBOX_DIR 下的绝对路径。
+    相对路径前置 SANDBOX_DIR；绝对路径原样返回（不做任何拦截）。"""
     p = Path(rel_or_abs_path)
     if not p.is_absolute():
         p = SANDBOX_DIR / p
-    resolved = p.resolve()
-    try:
-        resolved.relative_to(SANDBOX_DIR)
-    except ValueError:
-        raise PermissionError(
-            f"path '{rel_or_abs_path}' resolves outside sandbox: {resolved}"
-        )
-    return resolved
+    return p.resolve()
 
 
 def reset_sandbox() -> None:

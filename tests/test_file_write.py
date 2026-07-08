@@ -15,12 +15,6 @@ def test_write_auto_creates_parent_dirs():
     assert (SANDBOX_DIR / "sub" / "dir" / "file.txt").read_text() == "x"
 
 
-def test_write_outside_sandbox_rejected():
-    result = run(path="../escape.txt", content="x")
-    assert result["ok"] is False
-    assert result["error_type"] == "PermissionError"
-
-
 def test_write_overwrites_existing():
     (SANDBOX_DIR / "exists.txt").write_text("old")
     run(path="exists.txt", content="new")
