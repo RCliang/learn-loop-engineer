@@ -65,6 +65,71 @@ Total tools: 9
 - 上一版 12 工具的 deepagent：成功，但 21 轮、47k token——被命名冲突和 CWD 错位反复折磨。
 - 本次 9 工具的 deepagent：**失败**，9 轮、18k token——命名冲突没了，结果更糟。
 
+> ⚠️ **turns 列要先打个星号看**：handroll 和 deepagent 的 `loop_turns` 量的不是同一个东西，详细拆解见下面[「⚠️ 指标修正」](#-指标修正loop_turns-数的不是-llm-调用)一节。简言之：handroll 的 3 = 3 次 LLM 调用；deepagent 的 9 ≈ 3 次 LLM 调用被图的节点粒度膨胀到 9 个 stream 事件。**真正的差距在 token，不在 turns。**
+
+## ⚠️ 指标修正：`loop_turns` 数的不是 LLM 调用
+
+在深入根因之前，必须先纠正上面这张表的一个误导。
+
+- **handroll** 的 `loop_turns` = `for turn in range(max_turns)` 循环次数 = **LLM 调用数**。3 轮 = 模型想了 3 次。
+- **deepagent** 的 `loop_turns` = `agent.stream(stream_mode="updates")` 产出的事件数 = **LangGraph 节点更新数**。9 轮 ≠ 模型想了 9 次。
+
+### deepagents 的图其实有 6 个节点
+
+通过 `agent.get_graph().nodes` 抓取，编译图不止 `model ↔ tools` 两个节点，还有两个中间件节点：
+
+```
+__start__
+  → PatchToolCallsMiddleware.before_agent    ← 中间件，run 启动时跑一次
+  → model                                    ← 真正的 LLM 调用
+  → TodoListMiddleware.after_model           ← 中间件，每次 model 后跑，决定路由
+  → tools (条件性)                           ← 工具执行
+__end__
+```
+
+`TodoListMiddleware.after_model` 是 deepagents 的 todo-list 中间件，在**每次** LLM 调用后都跑一遍做路由判断，**每个节点更新都发一个 stream 事件**。所以一次"模型决策 + 工具调用"会被数成 ~3 个事件。
+
+### 实测事件拆解
+
+用诊断脚本流式打印每个事件的节点名（这次重跑出 12 事件，结构与 9-turn run 一致，只是模型多做了一次 `read_file` 探查）：
+
+| #   | 节点                                  | LLM 调用？ | 做了什么                                     |
+|-----|---------------------------------------|-----------|----------------------------------------------|
+| 1   | `PatchToolCallsMiddleware.before_agent` | ❌         | run 启动中间件                                |
+| 2   | **`model`**                           | ✅ #1      | 决定调 `write_file`                           |
+| 3   | `TodoListMiddleware.after_model`      | ❌         | 路由到 tools                                  |
+| 4   | `tools`                               | ❌         | 执行 write_file                               |
+| 5   | **`model`**                           | ✅ #2      | 决定调 `task` subagent                        |
+| 6   | `TodoListMiddleware.after_model`      | ❌         | 路由到 tools                                  |
+| 7   | `tools`                               | ❌         | 执行 task subagent（**18k token 大头藏这一条**）|
+| 8   | **`model`**                           | ✅ #3      | 决定调 `read_file`                            |
+| 9   | `TodoListMiddleware.after_model`      | ❌         | 路由到 tools                                  |
+| 10  | `tools`                               | ❌         | 执行 read_file                                |
+| 11  | **`model`**                           | ✅ #4      | 最终回答                                      |
+| 12  | `TodoListMiddleware.after_model`      | ❌         | 路由到 `__end__`                              |
+
+（原 9-turn run 结构相同，只是模型在 subagent 回报后直接放弃，少了一次 read_file 往返，所以 9 而非 12。）
+
+### 按类别归类
+
+| 类别                                          | 事件数 | 占比   |
+|-----------------------------------------------|--------|--------|
+| 真正的 LLM 调用（`model` 节点）                | 3-4    | ~33%   |
+| 中间件过路（`before_agent` + 每次 `after_model`）| 4-5    | ~42%   |
+| 工具执行（`tools` 节点）                       | 2-3    | ~25%   |
+
+**9 turns ≈ 3 次 LLM 调用**，和 handroll 的 3 次几乎打平。turns 这一列 deepagent 看起来差 3 倍，**纯粹是图粒度的测量假象**。
+
+### 那 token 为什么还是差 8 倍
+
+turns 打平了，token 差距（18k vs 2.3k）却是真的，三个来源：
+
+1. **工具 schema 重复计费** —— 每次 `model` 调用都在 context 里塞 9 个工具的完整 schema（`write_todos`、`task` subagent 的描述特别冗长）。handroll 只塞 3 个。光定义每次就多 ~1-2k token，3-4 次调用累计多 4-8k。
+2. **subagent 黑盒** —— 事件 7 那个 `tools` 节点内部，subagent 跑了自己的多轮 LLM 调用（推理、尝试 execute、失败、回报）。这些调用的 token **全算在 outer 的 `usage_metadata` 里**，但它们的 stream 事件**不冒泡**——所以 turn 数没涨、token 却炸了。详细见根因 #3。
+3. **中间件状态** —— `TodoListMiddleware` 往 context 注入 todo-list 状态，每次又是一份开销。
+
+**结论：deepagent 的真正代价不在"多想了几次"，而在每次想的 context 被框架的 schema 和中间件撑大了，外加 subagent 把内部 token 全记到外层账上。**
+
 ## 证据：deepagent 路径的完整轨迹
 
 RunLog（`outputs/runs/20260708_195154_092780_deepagent_task_01_simple_script.json`）记录了**两次工具调用**：
@@ -102,8 +167,8 @@ RunLog（`outputs/runs/20260708_195154_092780_deepagent_task_01_simple_script.js
 
 ### 关键反差
 
-- `loop_turns = 9`，但 `tool_calls` 只有 2 条。差的 7 轮去哪了？—— 全在 `task` subagent 内部消耗掉了（见根因 #3）。
-- `total_input_tokens = 18789`，对于一个"创建并运行 hello.py"的任务高得离谱。原因同样是 subagent。
+- `loop_turns = 9`，但 `tool_calls` 只有 2 条。**这并不是 subagent 在外层账上多跑了 7 轮**——见上面[「⚠️ 指标修正」](#-指标修正loop_turns-数的不是-llm-调用)，9 个事件里有 4-5 个是中间件过路、2-3 个是 tools 节点，真正的 LLM 调用只有 ~3 次。subagent 的内部轮次藏在事件 7 那个 `tools` 节点里、不冒泡，但它的 token 算在外层账上（见根因 #3）。
+- `total_input_tokens = 18789`，对于一个"创建并运行 hello.py"的任务高得离谱。这是 schema 重复计费 + subagent 黑盒 + 中间件状态三件事的叠加，详见指标修正节末尾。
 - 项目 `sandbox/` 目录在运行后**仍然为空**——文件根本没落到验证逻辑要查的位置。
 
 ## 根因 #1 —— 路径约定不匹配
@@ -146,13 +211,17 @@ False
 
 无论原因是什么，结果是模型把一个本可一步完成的命令执行，委派给了一个无状态的 subagent。subagent 有自己的工具表面（同样是这 9 个内置工具），它内部又得重新推理路径、重新尝试——这正好解释了下面的 token 放大。
 
-## 根因 #3 —— Subagent 吞掉 token，但不留轨迹
+## 根因 #3 —— Subagent 是 token 黑盒
 
-`loop_turns = 9` 与 `tool_calls` 数 = 2 的差距，是 subagent 内部消耗的明证。`_ingest_event` 只消费最外层 LangGraph 事件的 `AIMessage.tool_calls`——subagent 在自己的子图里跑，它内部的 LLM 调用、工具调用、token 消耗**不会作为顶层事件冒泡**到我们的 RunLog。
+> **修正说明**：本节初版把 `loop_turns=9` 与 `tool_calls=2` 的差距归因于"subagent 内部轮次冒泡到了外层 stream"。**这是错的**，已在上面[「⚠️ 指标修正」](#-指标修正loop_turns-数的不是-llm-调用)纠正：9 个事件全是外层图的节点（model + 中间件 + tools），subagent 的内部事件不冒泡。本节保留下来的有效结论是关于 **token** 的盲区，不是 turns。
 
-但 token 统计躲不开：`total_input_tokens = 18789` 包含了 subagent 内部所有的 LLM 调用。这些 token 花在了我们看不见的地方——subagent 可能内部又试了 `execute`、又 `ls` 探查、又 `read_file` 确认，最终回报失败。这 18k token 的细节，RunLog 里一个字都没有。
+`task` subagent 在事件 7 那个 `tools` 节点内部跑了自己的 LangGraph：自己的 LLM 调用、自己的工具尝试、自己的失败重试。`_ingest_event` 只消费最外层事件的 `AIMessage.tool_calls`——subagent 的内部 tool_calls **不会出现在我们的 RunLog 里**。
 
-这是 deepagents 框架的"抽象税"最尖锐的体现：**subagent 是黑盒，对比记录看不到它的内部行为**。handroll 路径没有 subagent 概念，每个工具调用都在 RunLog 里明明白白。
+但 token 统计躲不开：subagent 内部所有 LLM 调用的 token **会聚合进外层的 `usage_metadata`**。`total_input_tokens = 18789` 里，外层那 3 次 `model` 调用可能只占 ~6-8k，剩下 ~10k 是 subagent 内部黑盒消耗的——它可能试了 `execute`、又 `ls` 探查、又 `read_file` 确认，最终回报失败。这 ~10k token 的细节，RunLog 里一个字都没有。
+
+这是 deepagents 框架的"抽象税"最尖锐的体现：**subagent 让对比记录出现了一个"看得见 token、却看不见行为"的盲区**。handroll 路径没有 subagent 概念，每个工具调用都在 RunLog 里明明白白。
+
+要补这个盲区，光实现方案 B（捕获 ToolMessage）还不够——还得能穿透 subagent 的内部流，把 subagent 的 tool_calls 也摊到 RunLog 里。这是 Week 2 之后的工程。
 
 ## 根因 #4 —— `ok: true` 是估计值，不是事实
 
@@ -174,9 +243,11 @@ elif msg_type == "tool":
 |------------------|-------------------|------------------|
 | 命名冲突         | 3 对              | 0 对             |
 | 任务成功         | ✅ True            | ❌ False          |
-| 总轮次           | 21                | 9                |
+| 总轮次¹          | 21                | 9                |
 | 总 input token   | 47202             | 18789            |
 | 失败模式         | CWD 错位 → 5 次 bash 重试 | 路径错位 → 文件落错位置 + subagent 黑盒 |
+
+¹ 两列都是 deepagent 的 stream 事件数（同口径），但和 handroll 的 turns 不可比——见[「⚠️ 指标修正」](#-指标修正loop_turns-数的不是-llm-调用)。
 
 原因在于：**我们的共享工具是唯一一个把文件强制写到项目 `sandbox/` 的工具**。去掉它之后，工具表面里没有任何工具会自然地把文件送到验证逻辑要查的位置。deepagents 的 `write_file` 用绝对路径，模型心智模型里的"沙箱根"和真实文件系统根对不上，于是文件失踪。
 
