@@ -34,25 +34,62 @@ Five `bash_exec` attempts for a one-line file. The handroll trace is clean — o
 
 ## Evidence: What the Model Actually Sees
 
-Inspecting the ToolNode of the compiled graph (`agent.get_graph().nodes["tools"]`):
+Inspecting the ToolNode of the compiled graph (`agent.get_graph().nodes["tools"]`) reveals **12 tools total**: 9 deepagents built-ins + 3 of ours.
 
-```
-ToolNode tools_by_name:
-  - write_todos   [deepagents built-in: planning]
-  - ls            [deepagents built-in]
-  - read_file     [deepagents built-in]   ← conflicts with our file_read
-  - write_file    [deepagents built-in]   ← conflicts with our file_write
-  - edit_file     [deepagents built-in]
-  - glob          [deepagents built-in]
-  - grep          [deepagents built-in]
-  - execute       [deepagents built-in: shell]   ← overlaps our bash_exec
-  - task          [deepagents built-in: subagent spawn]
-  - bash_exec     [OURS]
-  - file_read     [OURS]
-  - file_write    [OURS]
-```
+### Full Tool Inventory
 
-11 tools total. The deepagents library documents this in `create_deep_agent`'s docstring:
+| # | Tool | Source | Overlap | Purpose (first line of description) | Key args |
+|---|------|--------|---------|-------------------------------------|----------|
+| 1 | `write_todos` | deepagents | — | Manage a structured task list for the current session | `todos: array` |
+| 2 | `ls` | deepagents | soft overlap with `file_read` | Lists all files in a directory | `path: string` (**absolute**) |
+| 3 | `read_file` | deepagents | **name-conflicts** with our `file_read` | Reads a file from the filesystem (supports pagination, multimodal) | `file_path`, `offset`, `limit` (**absolute path**) |
+| 4 | `write_file` | deepagents | **name-conflicts** with our `file_write` | Writes to a new file in the filesystem | `file_path`, `content` (**absolute path**) |
+| 5 | `edit_file` | deepagents | — | Performs exact string replacements in files | `file_path`, `old_string`, `new_string`, `replace_all` |
+| 6 | `glob` | deepagents | — | Find files matching a glob pattern | `pattern`, `path` |
+| 7 | `grep` | deepagents | — | Search for a text pattern across files (literal, not regex) | `pattern`, `path`, `glob`, `output_mode` |
+| 8 | `execute` | deepagents | **functional overlap** with our `bash_exec` | Executes a shell command in an isolated sandbox environment | `command`, `timeout` |
+| 9 | `task` | deepagents | — | Launch an ephemeral subagent for complex multi-step tasks | `description`, `subagent_type` |
+| 10 | `bash_exec` | **OURS** | — | 在沙箱 shell（限制在 sandbox/ 工作目录）中执行命令 | `command`, `timeout` |
+| 11 | `file_read` | **OURS** | — | 读取 sandbox/ 工作目录下的文件内容 | `path`, `encoding` (**relative to sandbox**) |
+| 12 | `file_write` | **OURS** | — | 将内容写入 sandbox/ 工作目录下的文件 | `path`, `content`, `encoding` (**relative to sandbox**) |
+
+### Three Conflict Pairs
+
+The collisions that actually confuse the model:
+
+| Built-in (deepagents) | Ours | Schema mismatch | Behavioral mismatch |
+|-----------------------|------|-----------------|---------------------|
+| `write_file(file_path=...)` | `file_write(path=...)` | arg name `file_path` vs `path` | built-in uses **absolute** paths from project root; ours uses **relative-to-sandbox** paths |
+| `read_file(file_path=...)` | `file_read(path=...)` | arg name `file_path` vs `path` | same as above; built-in also has `offset`/`limit` pagination we don't |
+| `execute(command=...)` | `bash_exec(command=...)` | same arg name `command` | built-in runs "in an isolated sandbox environment" (deepagents-managed); ours sets `cwd=SANDBOX_DIR` explicitly |
+
+### Built-in Tool Descriptions (Full Reference)
+
+The descriptions below are verbatim from the deepagents ToolNode (captured via `agent.get_graph().nodes["tools"].data.tools_by_name[name].description`). They are useful for understanding what the model sees when reasoning about which tool to pick.
+
+**`write_todos`** — Task-list manager. Triggers when the model thinks the task needs 3+ steps. Injects a planning phase that adds turns/tokens. (For `task_01_simple_script` this is pure overhead.)
+
+**`ls`** — Directory listing. Args: `path` (**"Must be absolute, not relative"**). The deepagents filesystem model is rooted at the project root, NOT at our sandbox.
+
+**`read_file`** — File reader with pagination + multimodal (images/PDFs). Args: `file_path` (**"Must be absolute"**), `offset` (0-indexed line), `limit`. Returns content in `cat -n` format.
+
+**`write_file`** — File creator. Args: `file_path` (**"Must be absolute"**), `content`. Documentation explicitly says "Prefer to edit existing files (with the edit_file tool) over creating new ones when possible."
+
+**`edit_file`** — String replacement editor. Requires reading the file first. Args: `file_path`, `old_string`, `new_string`, `replace_all`.
+
+**`glob`** — Pattern match. Args: `pattern` (e.g. `**/*.py`), `path` (base dir).
+
+**`grep`** — Literal text search (NOT regex). Args: `pattern`, `path`, `glob`, `output_mode` (`files_with_matches` | `content` | `count`).
+
+**`execute`** — Shell executor. Args: `command`, `timeout`. Documentation specifically says "avoid using search commands like find and grep. Instead use the grep, glob tools" and "avoid read tools like cat, head, tail, and use read_file". This is a Claude-Code-style opinionated workflow.
+
+**`task`** — Subagent spawner. Args: `description`, `subagent_type` (`general-purpose` by default). Each spawn is stateless.
+
+### Summary of the Built-in Behavior Model
+
+All deepagents built-in filesystem tools (`ls`, `read_file`, `write_file`, `edit_file`, `glob`, `grep`) **require absolute paths rooted at the project directory**. This is the opposite convention from our shared tools, which **require paths relative to `sandbox/`**. When the model mixes the two (which it will, because they look similar), the CWD assumptions collide and produce the kind of multi-attempt recovery seen in the RunLog.
+
+The deepagents library documents this in `create_deep_agent`'s docstring:
 
 > By default, this agent has access to the following tools:
 > - `write_todos`: manage a todo list
