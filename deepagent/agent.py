@@ -1,7 +1,8 @@
 """deepagent Code Agent —— LangChain deepagents 库的极薄包装。
 
 设计：
-- 共享 handroll 路的工具（ALL_TOOLS_AS_CALLABLES）保证对比公平
+- 只用 deepagents 的 9 个内置工具（不注入 handroll 的共享工具），
+  让框架按其原生工具表面工作，与 handroll 形成纯框架 vs 纯手写的对比
 - 共享 REACT 风格 system prompt（与 handroll.agent 等价语义）
 - 默认启用 deepagents 的 write_todos / planning，作为额外 tool_call 记录
 - 通过 agent.stream(stream_mode="updates") 事件流重构 RunLog
@@ -9,6 +10,11 @@
 【和 DeepAgent 的对比】
 - 这里的 `_ingest_event` 50 行做的事，handroll 是在 loop.py 里直接累加。
 - 关键观察：DeepAgent 通过事件流重构状态，handroll 直接在循环中更新。
+
+【工具表面变更说明】
+此前本路径注入 handroll 的 3 个共享工具（bash_exec / file_read / file_write），
+与 deepagents 内置工具形成 3 对命名冲突（详见 docs/findings/2026-07-07-...md）。
+现在改为 tools=[]，让 deepagents 只暴露其 9 个内置工具，得到一份"纯框架"基线。
 """
 from __future__ import annotations
 
@@ -26,7 +32,6 @@ except ImportError as e:
         "并执行 pip install -e '.[dev]'"
     ) from e
 
-from shared.tools.schemas import ALL_TOOLS_AS_CALLABLES
 from shared.utils.config import load_env
 from shared.tracker.run_logger import RunLog
 from tasks.task_base import Task
@@ -51,7 +56,7 @@ def build_agent():
     )
     return create_deep_agent(
         model=model,
-        tools=ALL_TOOLS_AS_CALLABLES,
+        tools=[],  # 只用 deepagents 的 9 个内置工具，不注入共享工具
         system_prompt=DEEP_AGENT_SYSTEM_PROMPT,
     )
 
