@@ -240,6 +240,8 @@ elif msg_type == "tool":
 
 ## Week 2 方案再评估
 
+> **2026-07-09 更新**：方案 A 已在 [2026-07-09-deepagent-backend-statebackend.md](./2026-07-09-deepagent-backend-statebackend.md) 中执行并**证伪**。真正的病根不是路径错位，而是 deepagents 默认的 `StateBackend` 是内存虚拟 FS（文件不落盘）。换成 `FilesystemBackend` 后 deepagent 立刻成功。本节下方的内容保留作为"当时的推测"——它描述了我们以为的问题，但下一轮实验证明这些大多是把症状当成了病根。
+
 在本次实验之后，原方案优先级需要重排：
 
 - **方案 A（增强 system prompt）** —— 现在是**最高优先级**且最便宜。告诉模型"沙箱目录的绝对路径是 `<项目根>/sandbox/`，bash CWD 已在该目录下"，预期能修掉 9 工具版的路径错位。

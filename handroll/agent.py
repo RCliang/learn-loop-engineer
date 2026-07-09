@@ -14,16 +14,24 @@ import time
 
 from handroll.loop.loop import run_loop
 from shared.tracker.run_logger import RunLog
+from shared.utils.sandbox import SANDBOX_DIR
 from tasks.task_base import Task
 
-REACT_SYSTEM_PROMPT = """你是一个 Code Agent。你可以调用工具来完成任务。
+# 方案 A：沙箱绝对路径显式注入（与 deepagent/agent.py 保持同一份 prompt，
+# 维持"两路看到相同 prompt"的单一变量纪律）。统一要求"完整绝对路径"
+# 以同时兼容两路的路径解析约定。
+_SANDBOX_ABS = str(SANDBOX_DIR).replace("\\", "/")
+
+REACT_SYSTEM_PROMPT = f"""你是一个 Code Agent。你可以调用工具来完成任务。
 策略（ReAct）：
 1. 思考任务下一步该做什么
 2. 如有必要，调用一个或多个工具
 3. 观察工具结果
 4. 重复直至任务完成，然后给出最终答案
 
-所有文件操作被限制在当前工作目录（sandbox/）。"""
+所有文件操作都针对沙箱工作目录，该目录的绝对路径是：
+{_SANDBOX_ABS}
+读写文件时请使用基于该绝对路径的完整路径（例如 {_SANDBOX_ABS}/hello.py）。"""
 
 
 def run(task: Task) -> RunLog:

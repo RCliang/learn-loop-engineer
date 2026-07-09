@@ -32,18 +32,35 @@ except ImportError as e:
         "并执行 pip install -e '.[dev]'"
     ) from e
 
+try:
+    from deepagents.backends import FilesystemBackend
+except ImportError as e:
+    raise ImportError(
+        "FilesystemBackend 不可用，请确认 deepagents 版本支持 backends.filesystem"
+    ) from e
+
 from shared.utils.config import load_env
+from shared.utils.sandbox import SANDBOX_DIR
 from shared.tracker.run_logger import RunLog
 from tasks.task_base import Task
 
-DEEP_AGENT_SYSTEM_PROMPT = """你是一个 Code Agent。你可以调用工具来完成任务。
+# 方案 A：把沙箱绝对路径显式注入 prompt，消除"当前工作目录（sandbox/）"这一
+# 误导性表述（它让模型把 /sandbox/ 当成文件系统根，详见
+# docs/findings/2026-07-08-deepagent-native-only-tools.md 根因 #1）。
+# 统一要求"完整绝对路径"——这是唯一能同时满足 handroll（绝对路径透传）
+# 和 deepagent 内置工具（从项目根解析）的指令。
+_SANDBOX_ABS = str(SANDBOX_DIR).replace("\\", "/")
+
+DEEP_AGENT_SYSTEM_PROMPT = f"""你是一个 Code Agent。你可以调用工具来完成任务。
 策略（ReAct）：
 1. 思考任务下一步该做什么
 2. 如有必要，调用一个或多个工具
 3. 观察工具结果
 4. 重复直至任务完成，然后给出最终答案
 
-所有文件操作被限制在当前工作目录（sandbox/）。"""
+所有文件操作都针对沙箱工作目录，该目录的绝对路径是：
+{_SANDBOX_ABS}
+读写文件时请使用基于该绝对路径的完整路径（例如 {_SANDBOX_ABS}/hello.py）。"""
 
 
 def build_agent():
@@ -58,6 +75,11 @@ def build_agent():
         model=model,
         tools=[],  # 只用 deepagents 的 9 个内置工具，不注入共享工具
         system_prompt=DEEP_AGENT_SYSTEM_PROMPT,
+        # 默认 StateBackend 是内存虚拟 FS（write 进 LangGraph state，不落盘），
+        # 导致 success_criterion 查磁盘永远找不到文件。改用 FilesystemBackend 让
+        # 内置 write_file/read_file/ls/glob 直接读写真实磁盘。详见
+        # docs/findings/2026-07-09-deepagent-backend-statebackend.md。
+        backend=FilesystemBackend(virtual_mode=False),
     )
 
 
