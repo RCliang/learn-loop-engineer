@@ -216,6 +216,8 @@ create_deep_agent(
 
 **下一个实验**：方案 D。在 FilesystemBackend baseline 上，想办法把 `task` subagent 的内部 tool_calls 也记进 RunLog，看清那 ~10k token 到底花在哪几步。
 
+> **2026-07-09 更新（第二轮）**：本篇的 FilesystemBackend baseline 后来换成了 `LocalShellBackend`（加上 `execute` 工具）。换 backend 时撞上一个之前没看见的新关卡——`validate_path` 显式拒绝 Windows 绝对路径，导致 `--agent both` 模式非确定性失败。**那次 FilesystemBackend 的"成功"其实也有 `validate_path` 拒绝 + 模型幸运自纠的痕迹**，本篇把它当成干净对照是高估了。详见 [2026-07-09-deepagent-localshell-validate-path.md](./2026-07-09-deepagent-localshell-validate-path.md)。
+
 ## 教学要点
 
 - **框架的"默认值"是最容易踩的坑**。`create_deep_agent` 的默认 `StateBackend` 对一个 Web agent（状态隔离、无磁盘依赖）是合理的；对一个要和磁盘 success_criterion 对齐的 Code Agent 就是陷阱。读 docstring 看到默认 backend 时，第一反应该是"它把文件写到哪了"，而不是假设它写磁盘。

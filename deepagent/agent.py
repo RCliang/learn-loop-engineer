@@ -33,10 +33,10 @@ except ImportError as e:
     ) from e
 
 try:
-    from deepagents.backends import FilesystemBackend
+    from deepagents.backends import LocalShellBackend
 except ImportError as e:
     raise ImportError(
-        "FilesystemBackend 不可用，请确认 deepagents 版本支持 backends.filesystem"
+        "LocalShellBackend 不可用，请确认 deepagents 版本支持 backends.local_shell"
     ) from e
 
 from shared.utils.config import load_env
@@ -75,11 +75,21 @@ def build_agent():
         model=model,
         tools=[],  # 只用 deepagents 的 9 个内置工具，不注入共享工具
         system_prompt=DEEP_AGENT_SYSTEM_PROMPT,
-        # 默认 StateBackend 是内存虚拟 FS（write 进 LangGraph state，不落盘），
-        # 导致 success_criterion 查磁盘永远找不到文件。改用 FilesystemBackend 让
-        # 内置 write_file/read_file/ls/glob 直接读写真实磁盘。详见
-        # docs/findings/2026-07-09-deepagent-backend-statebackend.md。
-        backend=FilesystemBackend(virtual_mode=False),
+        # LocalShellBackend = FilesystemBackend + execute 工具（实现 SandboxBackendProtocol）。
+        # 之前用 FilesystemBackend：文件能落盘，但 execute 工具一调就返回错误
+        # （FilesystemBackend 不实现 SandboxBackendProtocol，见 deepagents graph.py:290-292），
+        # 模型只能委派 task subagent 间接跑命令。换 LocalShellBackend 后，
+        # execute 通过 subprocess.run(shell=True, cwd=SANDBOX_DIR) 直接在主机执行，
+        # 模型可以自己跑 `python hello.py`，不必再委派 subagent。详见
+        # docs/findings/2026-07-09-deepagent-backend-statebackend.md 和
+        # docs/findings/2026-07-09-deepagent-localshell-validate-path.md（后者记录了
+        # LocalShellBackend 在 --agent both 模式下因 validate_path 拒绝 Windows 绝对路径
+        # 而非确定性失败的问题）。
+        backend=LocalShellBackend(
+            root_dir=str(SANDBOX_DIR),
+            virtual_mode=False,
+            inherit_env=True,  # 让 PATH 上的 python 等命令对 agent 可见
+        ),
     )
 
 
