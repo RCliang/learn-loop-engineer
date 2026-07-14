@@ -1,0 +1,205 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * Chapter 01 — coldopen
+ * CSS prefix: .co-
+ * Theme: terminal-green (all colors via tokens)
+ * Pixel font: Press Start 2P (user-directed aesthetic)
+ * ───────────────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+.co-scene {
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100%;
+  --pixel: 'Press Start 2P', monospace;
+}
+
+.co-center {
+  text-align: center;
+}
+
+/* ─── Step 0: Terminal (no border, IDE style) ─── */
+.co-terminal {
+  width: 900px;
+  max-width: 100%;
+}
+
+.co-term-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.co-term-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.co-dot-r { background: #ff5f56; }
+.co-dot-y { background: #ffbd2e; }
+.co-dot-g { background: var(--accent); }
+
+.co-term-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-mute);
+  margin-left: 12px;
+}
+
+.co-term-body {
+  padding: 24px 28px;
+  font-family: var(--pixel);
+  font-size: 16px;
+  line-height: 2.2;
+}
+
+.co-line {
+  white-space: nowrap;
+}
+
+.co-prompt {
+  color: var(--accent);
+  text-shadow: var(--text-shadow);
+}
+
+.co-dim {
+  color: var(--text-mute);
+}
+
+.co-tool {
+  color: var(--accent);
+  text-shadow: var(--text-shadow);
+}
+
+.co-success {
+  color: var(--text-2);
+}
+
+.co-done {
+  color: var(--accent);
+  font-size: 20px;
+  text-shadow: var(--text-shadow);
+  margin-top: 8px;
+}
+
+/* ─── Step 1: Stats ─── */
+.co-stats {
+  display: flex;
+  gap: 80px;
+  align-items: baseline;
+}
+
+.co-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.co-stat-num {
+  font-family: var(--pixel);
+  font-size: 100px;
+  line-height: 1;
+  text-shadow: 0 0 30px var(--accent-glow);
+  image-rendering: pixelated;
+}
+
+.co-stat-label {
+  font-family: var(--pixel);
+  font-size: 20px;
+  color: var(--text-mute);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Step 2: Hero statement ─── */
+.co-brands {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 48px;
+}
+
+.co-brand {
+  font-family: var(--pixel);
+  font-size: 28px;
+  color: var(--text-mute);
+}
+
+.co-brand-sep {
+  font-size: 28px;
+  color: var(--text-faint);
+}
+
+.co-hero-statement {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+
+.co-hero-eq {
+  font-family: var(--pixel);
+  font-size: 56px;
+  color: var(--text-mute);
+}
+
+.co-hero-code {
+  font-family: var(--pixel);
+  font-size: 72px;
+  color: var(--accent);
+  text-shadow: 0 0 40px var(--accent-glow);
+}
+
+/* ─── Step 3: Journey ─── */
+.co-journey {
+  display: flex;
+  align-items: center;
+  gap: 48px;
+}
+
+.co-journey-from,
+.co-journey-to {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.co-journey-code {
+  font-family: var(--pixel);
+  font-size: 22px;
+  color: var(--text-mute);
+  padding: 24px 36px;
+  border: 1px solid var(--rule);
+  background: var(--surface-2);
+}
+
+.co-journey-arrow {
+  font-family: var(--pixel);
+  font-size: 48px;
+  color: var(--accent);
+  text-shadow: var(--text-shadow);
+  animation: co-pulse 2s ease-in-out infinite;
+}
+
+@keyframes co-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.co-journey-agent {
+  font-family: var(--pixel);
+  font-size: 56px;
+  color: var(--accent);
+  text-shadow: 0 0 30px var(--accent-glow);
+}
+
+.co-journey-label {
+  font-family: var(--pixel);
+  font-size: 22px;
+  color: var(--text-mute);
+}

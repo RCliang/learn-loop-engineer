@@ -1,0 +1,87 @@
+/* ─────────────────────────────────────────────────────────────────────
+ * Theme · pixel-crt
+ *   Retro arcade / 8-bit CRT. Deep navy shell + neon red accent +
+ *   mint green + amber yellow, the classic 4-color arcade palette.
+ *   Press Start 2P for display (pixel block letters), VT323 for body
+ *   (CRT terminal text). Sharp 0px corners, thick 4px pixel borders with
+ *   offset hard shadows. CRT scanline overlay + faint vignette.
+ *
+ *   character knobs:
+ *     • hero numbers   — Press Start 2P, weight normal, blocky pixel glow
+ *     • rule           — 2px solid mint (arcade divider)
+ *     • card           — 0 radius + 4px navy border + hard offset shadow
+ *     • surface        — horizontal scanlines (3px) + corner vignette
+ *     • motion         — snappy + stepped (arcade blip, not springy)
+ *
+ *   Inspired by retro terminal/code-teaching decks. Built from the
+ *   terminal-green base, re-palette to navy + arcade RGB.
+ * ───────────────────────────────────────────────────────────────────── */
+:root {
+  /* ─── palette: deep navy + neon red + mint + amber ─── */
+  --shell:        #0d0d1a;
+  --surface:      #1a1a2e;
+  --surface-2:    #16213e;
+  --surface-3:    #0f1530;
+  --text:         #c8d6e5;
+  --text-2:       #a5b3c8;
+  --text-mute:    #576574;
+  --text-faint:   #3a4a5e;
+  --rule:         rgba(78, 205, 196, 0.35);
+  --accent:       #e94560;
+  --accent-soft:  rgba(233, 69, 96, 0.12);
+  --accent-glow:  rgba(233, 69, 96, 0.55);
+
+  /* secondary arcade hues (used as derived tokens, NOT a second accent) */
+  --mint:         #4ecdc4;
+  --amber:        #f9ca24;
+
+  /* ─── fonts: pixel display + CRT terminal body ─── */
+  --font-display-cn: "Press Start 2P", "Noto Sans Mono CJK SC", monospace;
+  --font-display-en: "Press Start 2P", "SF Mono", ui-monospace, monospace;
+  --font-body:       "VT323", "JetBrains Mono", "Noto Sans Mono CJK SC", monospace;
+  --font-mono:       "VT323", "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --font-features:   "tnum";
+
+  /* ─── motion: snappy arcade blip (stepped, not springy) ─── */
+  --ease-quart:    steps(8, end);
+  --ease-expo:     steps(6, end);
+  --dur-quick:     160ms;
+  --dur-base:      320ms;
+  --dur-slow:      560ms;
+  --dur-cinematic: 900ms;
+
+  /* ─── design identity: arcade cells ─── */
+  --r-card:        var(--r-flat);    /* SIGNATURE — sharp pixel corners */
+  --r-stage:       0;
+  --rule-w:        2px;
+  --rule-style:    solid;
+  --hero-num-font:    var(--font-display-en);
+  --hero-num-style:   normal;
+  --hero-num-weight:  400;
+  --hero-num-track:   0;
+  --stage-pad-x:   88px;
+  --stage-pad-y:   72px;
+  --text-shadow:   3px 3px 0 rgba(233, 69, 96, 0.25);
+  --card-shadow:
+    inset 0 0 0 2px var(--shell),
+    inset 0 0 0 4px rgba(15, 52, 96, 0.8),
+    8px 8px 0 rgba(0, 0, 0, 0.35);
+  --stage-border:  4px solid #0f3460;
+  --shadow-stage:
+    0 60px 160px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(15, 52, 96, 0.6),
+    0 0 60px rgba(78, 205, 196, 0.06);
+
+  /* ─── decoration: CRT scanlines + corner vignette ─── */
+  --surface-pattern:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.10) 2px,
+      rgba(0, 0, 0, 0.10) 4px
+    );
+  --surface-pattern-size: 100% 100%;
+  --surface-vignette:
+    radial-gradient(ellipse at center, transparent 35%, rgba(5, 8, 20, 0.55) 100%);
+}

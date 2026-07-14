@@ -11,3 +11,5 @@ outputs/runs/*
 tmpclaude-*
 .claude/
 *.egg-info/
+.zod*
+nul

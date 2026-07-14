@@ -14,24 +14,29 @@ import time
 
 from handroll.loop.loop import run_loop
 from shared.tracker.run_logger import RunLog
-from shared.utils.sandbox import SANDBOX_DIR
 from tasks.task_base import Task
 
-# 方案 A：沙箱绝对路径显式注入（与 deepagent/agent.py 保持同一份 prompt，
-# 维持"两路看到相同 prompt"的单一变量纪律）。统一要求"完整绝对路径"
-# 以同时兼容两路的路径解析约定。
-_SANDBOX_ABS = str(SANDBOX_DIR).replace("\\", "/")
+# 方案 A（v2）：相对路径模式。
+#
+# 两路 prompt 保持语义一致（单一变量纪律）：
+# - deepagent 用虚拟路径（/hello.py）—— FilesystemMiddleware 会 validate_path
+# - handroll 用相对路径（hello.py）—— resolve_in_sandbox() 拼到 SANDBOX_DIR
+# 两者最终都落到 sandbox/hello.py，只是路径表达形式不同。
+# 这是工具层语义差异所致，prompt 的核心指令相同。
 
-REACT_SYSTEM_PROMPT = f"""你是一个 Code Agent。你可以调用工具来完成任务。
+REACT_SYSTEM_PROMPT = """你是一个 Code Agent。你可以调用工具来完成任务。
 策略（ReAct）：
 1. 思考任务下一步该做什么
 2. 如有必要，调用一个或多个工具
 3. 观察工具结果
 4. 重复直至任务完成，然后给出最终答案
 
-所有文件操作都针对沙箱工作目录，该目录的绝对路径是：
-{_SANDBOX_ABS}
-读写文件时请使用基于该绝对路径的完整路径（例如 {_SANDBOX_ABS}/hello.py）。"""
+所有文件操作都针对当前工作目录。
+文件路径请使用相对路径，例如：
+- hello.py 表示工作目录下的 hello.py
+- scripts/run.py 表示工作目录下 scripts/run.py
+
+执行 shell 命令时，当前工作目录已经是工作目录，直接用文件名即可（如 python hello.py）。"""
 
 
 def run(task: Task) -> RunLog:
@@ -40,6 +45,7 @@ def run(task: Task) -> RunLog:
         agent_type="handroll",
         planner_strategy="react",
     )
+    run_log.system_prompt = REACT_SYSTEM_PROMPT
     start = time.time()
     run_log = run_loop(task, REACT_SYSTEM_PROMPT, run_log, max_turns=15)
     run_log.duration_s = round(time.time() - start, 3)

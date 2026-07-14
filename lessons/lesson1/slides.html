@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>第一课：从 for 循环到 Agent</title>
+<style>
+@font-face {
+  font-family: 'Pixel';
+  src: url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+}
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+:root {
+  --bg: #1a1a2e;
+  --panel: #16213e;
+  --border: #0f3460;
+  --text: #c8d6e5;
+  --accent: #e94560;
+  --green: #4ecdc4;
+  --dim: #576574;
+  --yellow: #f9ca24;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+/* CRT scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Slide system */
+.slide {
+  display: none;
+  min-height: 100vh;
+  padding: 60px 40px;
+  animation: fadeIn 0.3s ease;
+}
+.slide.active { display: flex; flex-direction: column; justify-content: center; align-items: center; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Typography */
+h1 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 28px;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 40px;
+  line-height: 1.6;
+  text-shadow: 3px 3px 0 rgba(233,69,96,0.2);
+}
+
+h2 {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 22px;
+  color: var(--green);
+  margin-bottom: 30px;
+  line-height: 1.8;
+}
+
+p, li {
+  font-size: 22px;
+  line-height: 1.8;
+  max-width: 800px;
+}
+
+/* Pixel border box */
+.pixel-box {
+  border: 4px solid var(--border);
+  background: var(--panel);
+  padding: 30px;
+  margin: 20px 0;
+  max-width: 860px;
+  width: 100%;
+  position: relative;
+  image-rendering: pixelated;
+  box-shadow:
+    inset 0 0 0 2px var(--bg),
+    inset 0 0 0 4px var(--border),
+    8px 8px 0 rgba(0,0,0,0.3);
+}
+.pixel-box::before {
+  content: '';
+  position: absolute;
+  top: -4px; left: -4px; right: -4px; bottom: -4px;
+  border: 2px solid var(--dim);
+  pointer-events: none;
+}
+
+/* Code block */
+.code-block {
+  background: #0d1117;
+  border: 2px solid var(--border);
+  padding: 20px 24px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-size: 18px;
+  line-height: 1.7;
+  white-space: pre;
+  color: var(--text);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+  position: relative;
+}
+.code-block::before {
+  content: '📄 CODE';
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--dim);
+  letter-spacing: 1px;
+}
+.code-block .kw { color: var(--accent); }
+.code-block .fn { color: var(--green); }
+.code-block .str { color: var(--yellow); }
+.code-block .comment { color: var(--dim); }
+
+/* Flow diagram */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 30px 0;
+}
+.flow-node {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  padding: 14px 18px;
+  border: 3px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  text-align: center;
+  min-width: 120px;
+  line-height: 1.6;
+}
+.flow-node.active-node {
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 12px rgba(78,205,196,0.2);
+}
+.flow-arrow {
+  font-size: 24px;
+  color: var(--dim);
+  font-family: 'Press Start 2P', monospace;
+}
+
+/* Pixel character hint */
+.pixel-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  max-width: 860px;
+}
+.pixel-char {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.pixel-hint-bubble {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: var(--yellow);
+  background: var(--panel);
+  border: 2px solid var(--border);
+  padding: 8px 14px;
+  position: relative;
+}
+.pixel-hint-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 10px;
+  width: 0; height: 0;
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid var(--border);
+}
+
+/* Table */
+.pixel-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 18px;
+}
+.pixel-table th {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 12px 16px;
+  border-bottom: 3px solid var(--border);
+  color: var(--green);
+  text-align: left;
+}
+.pixel-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.pixel-table tr:hover td {
+  background: rgba(78,205,196,0.05);
+}
+
+/* Terminal simulation */
+.terminal {
+  background: #000;
+  border: 3px solid #333;
+  padding: 20px;
+  margin: 20px 0;
+  max-width: 860px;
+  width: 100%;
+  font-size: 16px;
+  line-height: 1.6;
+  box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 40px rgba(0,0,0,0.3);
+  position: relative;
+}
+.terminal::before {
+  content: '▶ TERMINAL';
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--green);
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+.terminal-header {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #333;
+}
+.terminal-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--dim);
+}
+.terminal-dot:first-child { background: var(--accent); }
+.terminal-dot:nth-child(2) { background: var(--yellow); }
+.terminal-dot:nth-child(3) { background: var(--green); }
+.term-line { margin: 4px 0; }
+.term-prompt { color: var(--green); }
+.term-output { color: var(--dim); }
+.term-tool { color: var(--yellow); }
+.term-success { color: var(--green); }
+.term-error { color: var(--accent); }
+
+/* Blink cursor */
+.cursor {
+  display: inline-block;
+  width: 10px;
+  height: 18px;
+  background: var(--green);
+  animation: blink 1s step-end infinite;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+/* Progress bar */
+.progress-bar {
+  display: flex;
+  gap: 4px;
+  margin: 30px 0;
+}
+.progress-block {
+  width: 40px; height: 12px;
+  border: 2px solid var(--border);
+  transition: all 0.3s;
+}
+.progress-block.filled {
+  background: var(--green);
+  border-color: var(--green);
+}
+.progress-block.current {
+  background: var(--accent);
+  border-color: var(--accent);
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse {
+  50% { opacity: 0.5; }
+}
+
+/* Navigation */
+.nav {
+  position: fixed;
+  bottom: 30px;
+  right: 40px;
+  display: flex;
+  gap: 12px;
+  z-index: 100;
+}
+.nav-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  padding: 10px 18px;
+  border: 3px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-btn:hover {
+  border-color: var(--green);
+  color: var(--green);
+}
+.nav-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* Slide counter */
+.slide-counter {
+  position: fixed;
+  bottom: 34px;
+  left: 40px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: var(--dim);
+  z-index: 100;
+}
+
+/* Tag */
+.tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 2px solid var(--dim);
+  font-size: 14px;
+  color: var(--dim);
+  margin: 4px 4px 4px 0;
+}
+.tag.ok { border-color: var(--green); color: var(--green); }
+.tag.fail { border-color: var(--accent); color: var(--accent); }
+.tag.new { border-color: var(--yellow); color: var(--yellow); }
+
+/* Typing animation for specific elements */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 3px solid var(--green);
+  animation: typing 2s steps(30) forwards, blinkCaret 0.8s step-end infinite;
+  width: 0;
+}
+@keyframes typing {
+  to { width: 100%; }
+}
+@keyframes blinkCaret {
+  50% { border-color: transparent; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  h1 { font-size: 18px; }
+  h2 { font-size: 12px; }
+  .slide { padding: 40px 20px; }
+  .pixel-box { padding: 20px; }
+  .nav { bottom: 15px; right: 15px; }
+  .slide-counter { bottom: 18px; left: 15px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Slide 0: Title -->
+<section class="slide active" id="s0">
+  <h1>第一课<br><br>从 for 循环<br>到 Agent</h1>
+  <p style="text-align:center; color:var(--dim); margin-top:30px;">
+    ─── 从零构建 Agent 应用 · 系列课程 ───
+  </p>
+  <p style="text-align:center; color:var(--dim); margin-top:20px; font-size:16px;">
+    [ 按 → 或点击 NEXT 开始 ]
+  </p>
+</section>
+
+<!-- Slide 1: The Question -->
+<section class="slide" id="s1">
+  <h2>// 一个问题</h2>
+  <div class="pixel-box">
+    <p style="font-size:24px; color:var(--text);">
+      市面上所有 Agent 框架<br>
+      —— LangChain、CrewAI、AutoGen ——<br><br>
+      它们的核心，都是一个 <span style="color:var(--accent);">for 循环</span>。
+    </p>
+  </div>
+  <p style="margin-top:30px; color:var(--dim); text-align:center;">
+    今天我们证明这件事。
+  </p>
+</section>
+
+<!-- Slide 2: Final Demo -->
+<section class="slide" id="s2">
+  <h2>// 先看最终效果</h2>
+  <div class="terminal">
+    <div class="terminal-header">
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+      <div class="terminal-dot"></div>
+    </div>
+    <div class="term-line"><span class="term-prompt">$ </span>python v4_final.py</div>
+    <div class="term-line"></div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line">  Turn 1</div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line"><span class="term-output">💭 思考: 我需要创建 hello.py 并运行它</span></div>
+    <div class="term-line"><span class="term-tool">🔧 工具调用: file_write</span></div>
+    <div class="term-line"><span class="term-output">   参数: {"path":"hello.py","content":"print('hello world')"}</span></div>
+    <div class="term-line"><span class="term-success">   结果: ✓ 已写入 20 字节到 hello.py</span></div>
+    <div class="term-line"></div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line">  Turn 2</div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line"><span class="term-tool">🔧 工具调用: bash_exec</span></div>
+    <div class="term-line"><span class="term-output">   参数: {"command":"python hello.py"}</span></div>
+    <div class="term-line"><span class="term-success">   结果: 退出代码: 0  输出: hello world</span></div>
+    <div class="term-line"></div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line"><span class="term-success">  ✅ 任务完成</span></div>
+    <div class="term-line">══════════════════════════════════════</div>
+    <div class="term-line"></div>
+    <div class="term-line"><span class="term-output">──────────────────────────────</span></div>
+    <div class="term-line"><span class="term-output">  📊 轮次: 3 | 工具: 2 次 | Token: 2508</span></div>
+    <div class="term-line"><span class="term-output">──────────────────────────────</span></div>
+  </div>
+  <p style="text-align:center; margin-top:20px; color:var(--dim);">整个 Agent 的核心代码：150 行</p>
+</section>
+
+<!-- Slide 3: Roadmap -->
+<section class="slide" id="s3">
+  <h2>// 今天的路线</h2>
+  <div class="pixel-box">
+    <table class="pixel-table">
+      <tr><th>版本</th><th>加入能力</th><th>状态</th></tr>
+      <tr><td>v1</td><td>LLM 调用循环</td><td><span class="tag">能想</span></td></tr>
+      <tr><td>v2</td><td>+ 工具定义与执行</td><td><span class="tag">能做</span></td></tr>
+      <tr><td>v3</td><td>+ Evaluator 三层刹车</td><td><span class="tag">会停</span></td></tr>
+      <tr><td>v4</td><td>+ Observation 格式化</td><td><span class="tag ok">完整</span></td></tr>
+    </table>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+  </div>
+</section>
+
+<!-- Slide 4: V1 -->
+<section class="slide" id="s4">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务一：让 Agent 开口说话，先把循环跑起来</div>
+  </div>
+  <h2>// 最简循环：能想，不能做</h2>
+  <div class="pixel-box">
+    <div class="code-block"><span class="kw">for</span> turn <span class="kw">in</span> <span class="fn">range</span>(max_turns):
+    resp = client.chat.completions.<span class="fn">create</span>(
+        model=MODEL,
+        messages=messages,
+    )
+    reply = resp.choices[0].message.content
+    messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: reply})
+
+    <span class="comment"># 问题：没有工具，只能说话</span>
+    <span class="comment"># 问题：没有停止条件，跑满轮次</span></div>
+  </div>
+  <div class="terminal" style="max-width:700px;">
+    <div class="terminal-header"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div></div>
+    <div class="term-line"><span class="term-prompt">$ </span>python v1_bare_loop.py</div>
+    <div class="term-line"><span class="term-output">── Turn 1 ──</span></div>
+    <div class="term-line"><span class="term-output">LLM: 好的，我来帮你创建 hello.py...</span></div>
+    <div class="term-line"><span class="term-error">（但实际什么都没发生 ❌）</span></div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-block current"></div>
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+  </div>
+</section>
+
+<!-- Slide 5: V2 Concept -->
+<section class="slide" id="s5">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务二：给 Agent 装上手脚，让它能操作文件和命令</div>
+  </div>
+  <h2>// 给 Agent 装上手 —— 三件事</h2>
+  <div class="pixel-box">
+    <p style="font-size:22px; margin-bottom:16px;">
+      <span style="color:var(--yellow);">①</span> 告诉 LLM 它有什么工具（Tools Schema）
+    </p>
+    <p style="font-size:22px; margin-bottom:16px;">
+      <span style="color:var(--yellow);">②</span> 解析 LLM 返回的工具调用请求
+    </p>
+    <p style="font-size:22px;">
+      <span style="color:var(--yellow);">③</span> 执行工具，把结果回传给 LLM
+    </p>
+  </div>
+  <div class="flow">
+    <div class="flow-node">LLM 思考</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node active-node">调用工具</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node active-node">执行</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node">回传结果</div>
+    <span class="flow-arrow">→</span>
+    <div class="flow-node">循环</div>
+  </div>
+</section>
+
+<!-- Slide 6: V2 Code -->
+<section class="slide" id="s6">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务二续：定义工具的样子，LLM 才知道怎么调</div>
+  </div>
+  <h2>// 工具定义：告诉 LLM 它能做什么</h2>
+  <div class="pixel-box">
+    <div class="code-block">TOOLS = [{
+    <span class="str">"type"</span>: <span class="str">"function"</span>,
+    <span class="str">"function"</span>: {
+        <span class="str">"name"</span>: <span class="str">"bash_exec"</span>,
+        <span class="str">"description"</span>: <span class="str">"在工作目录中执行 shell 命令"</span>,
+        <span class="str">"parameters"</span>: {
+            <span class="str">"properties"</span>: {
+                <span class="str">"command"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>}
+            }
+        }
+    }
+}]
+
+<span class="comment"># description 写得越清晰</span>
+<span class="comment"># → LLM 选对工具的概率越高</span></div>
+  </div>
+</section>
+
+<!-- Slide 7: V2 Key Logic -->
+<section class="slide" id="s7">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务二续：怎么判断"做完了"？不调工具就是完成</div>
+  </div>
+  <h2>// 关键判断：何时算"完成"</h2>
+  <div class="pixel-box">
+    <div class="code-block"><span class="comment"># 当 LLM 不再调用任何工具</span>
+<span class="comment"># → 它认为任务已经完成了</span>
+
+<span class="kw">if not</span> msg.tool_calls:
+    <span class="fn">print</span>(<span class="str">"✓ 任务完成"</span>)
+    <span class="kw">return</span> text
+
+<span class="comment"># 这是 function calling 的隐式约定：</span>
+<span class="comment"># "不调工具" = "我做完了"</span></div>
+  </div>
+  <div class="terminal" style="max-width:700px;">
+    <div class="terminal-header"><div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div></div>
+    <div class="term-line"><span class="term-prompt">$ </span>python v2_with_tools.py</div>
+    <div class="term-line"><span class="term-output">── Turn 1 ──</span></div>
+    <div class="term-line"><span class="term-tool">  → 工具: file_write({"path":"hello.py",...})</span></div>
+    <div class="term-line"><span class="term-success">  ← 结果: 已写入 20 字节</span></div>
+    <div class="term-line"><span class="term-output">── Turn 2 ──</span></div>
+    <div class="term-line"><span class="term-tool">  → 工具: bash_exec({"command":"python hello.py"})</span></div>
+    <div class="term-line"><span class="term-success">  ← 结果: hello world</span></div>
+    <div class="term-line"><span class="term-output">── Turn 3 ──</span></div>
+    <div class="term-line"><span class="term-success">✓ 任务完成（LLM 不再调用工具）</span></div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-block filled"></div>
+    <div class="progress-block current"></div>
+    <div class="progress-block"></div>
+    <div class="progress-block"></div>
+  </div>
+</section>
+
+<!-- Slide 8: V3 Why -->
+<section class="slide" id="s8">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务三：给 Agent 装刹车，不然它会把钱烧光</div>
+  </div>
+  <h2>// 没有刹车的 Agent 会烧光你的钱</h2>
+  <div class="pixel-box">
+    <p style="font-size:22px; margin-bottom:20px; color:var(--accent);">
+      如果 LLM 陷入死循环怎么办？
+    </p>
+    <div class="code-block"><span class="comment"># 真实场景：LLM 反复尝试一个不存在的命令</span>
+Turn 3:  → bash_exec("pip3 install magic")   <span class="term-error">❌ 失败</span>
+Turn 4:  → bash_exec("pip3 install magic")   <span class="term-error">❌ 失败</span>
+Turn 5:  → bash_exec("pip3 install magic")   <span class="term-error">❌ 失败</span>
+Turn 6:  → bash_exec("pip3 install magic")   <span class="term-error">❌ 失败</span>
+...
+Turn 99: → <span class="term-error">💸 $47.83 已消耗</span></div>
+  </div>
+</section>
+
+<!-- Slide 9: V3 Three Brakes -->
+<section class="slide" id="s9">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务三续：三道防线，从暴力到智能</div>
+  </div>
+  <h2>// 三层刹车</h2>
+  <div class="pixel-box">
+    <div class="code-block"><span class="kw">class</span> <span class="fn">Evaluator</span>:
+    <span class="kw">def</span> <span class="fn">should_stop</span>(self, turn, last_action):
+
+        <span class="comment"># 刹车 1：硬上限（保险丝）</span>
+        <span class="kw">if</span> turn >= self.max_turns:
+            <span class="kw">return</span> True, <span class="str">"max_turns"</span>
+
+        <span class="comment"># 刹车 2：死循环检测（同一操作 ≥3 次）</span>
+        h = <span class="fn">md5</span>(str(last_action))
+        <span class="kw">if</span> self._hashes.<span class="fn">count</span>(h) >= 2:
+            <span class="kw">return</span> True, <span class="str">"loop_detected"</span>
+
+        <span class="comment"># 刹车 3：self-critique（下一课展开）</span>
+        <span class="kw">return</span> False, <span class="str">""</span></div>
+  </div>
+  <p style="text-align:center; margin-top:20px; color:var(--dim);">
+    Agent 可靠性的关键 ≠ LLM 更强，= Evaluator 更靠谱
+  </p>
+  <div class="progress-bar">
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+    <div class="progress-block current"></div>
+    <div class="progress-block"></div>
+  </div>
+</section>
+
+<!-- Slide 10: V4 -->
+<section class="slide" id="s10">
+  <div class="pixel-hint">
+    <span class="pixel-char">🧙</span>
+    <div class="pixel-hint-bubble">任务四：格式化结果，让 Agent 看懂工具的反馈</div>
+  </div>
+  <h2>// 格式化：让 LLM 看得懂结果</h2>
+  <div class="pixel-box">
+    <p style="margin-bottom:16px; color:var(--dim);">原始结果（LLM 需要费力解析）：</p>
+    <div class="code-block" style="font-size:15px;">{"ok":false,"error_type":"TimeoutExpired","message":"超时 30s","stdout":"","stderr":"","exit_code":-1,"duration_s":30.012}</div>
+    <p style="margin:20px 0 16px; color:var(--green);">格式化后（一目了然）：</p>
+    <div class="code-block" style="font-size:18px;"><span class="term-error">[错误] bash_exec 失败: 命令超时(30s)</span></div>
+  </div>
+  <div class="pixel-box" style="margin-top:20px;">
+    <div class="code-block"><span class="kw">def</span> <span class="fn">format_observation</span>(tool_name, result):
+    <span class="kw">if not</span> result.get(<span class="str">"ok"</span>):
+        <span class="kw">return</span> <span class="str">f"[错误] {tool_name} 失败: {result['message']}"</span>
+    <span class="kw">if</span> tool_name == <span class="str">"bash_exec"</span>:
+        <span class="kw">return</span> <span class="str">f"退出代码: {result['exit_code']}\n输出:\n{result['stdout']}"</span>
+
+<span class="comment"># 目标不是美观，是让 LLM 做出更好的下一步决策</span></div>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+    <div class="progress-block current"></div>
+  </div>
+</section>
+
+<!-- Slide 11: Full Picture -->
+<section class="slide" id="s11">
+  <h2>// 完整循环：一张图</h2>
+  <div class="pixel-box" style="padding:40px 30px;">
+    <svg viewBox="0 0 600 520" style="width:100%; max-width:600px; margin:0 auto; display:block;" font-family="'Press Start 2P', monospace">
+      <!-- Circular arrow path -->
+      <path d="M 300 60 A 200 200 0 1 1 298 60" fill="none" stroke="#0f3460" stroke-width="3" stroke-dasharray="8 4"/>
+      <!-- Arrow head on the circle -->
+      <polygon points="310,58 298,48 298,68" fill="#0f3460"/>
+
+      <!-- Node 1: LLM -->
+      <rect x="210" y="30" width="180" height="50" rx="4" fill="#16213e" stroke="#4ecdc4" stroke-width="3"/>
+      <text x="300" y="58" text-anchor="middle" fill="#4ecdc4" font-size="11">① 调 LLM</text>
+
+      <!-- Node 2: Parse -->
+      <rect x="420" y="150" width="160" height="50" rx="4" fill="#16213e" stroke="#0f3460" stroke-width="3"/>
+      <text x="500" y="172" text-anchor="middle" fill="#c8d6e5" font-size="9">② 有TOOL_CALLS?</text>
+
+      <!-- Branch: NO → Done -->
+      <line x1="500" y1="200" x2="500" y2="260" stroke="#4ecdc4" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="515" y="235" fill="#576574" font-size="9">NO</text>
+      <rect x="430" y="265" width="140" height="45" rx="4" fill="#16213e" stroke="#4ecdc4" stroke-width="3"/>
+      <text x="500" y="292" text-anchor="middle" fill="#4ecdc4" font-size="10">完成 ✓</text>
+
+      <!-- Node 3: Execute -->
+      <rect x="395" y="340" width="170" height="50" rx="4" fill="#16213e" stroke="#4ecdc4" stroke-width="3"/>
+      <text x="480" y="368" text-anchor="middle" fill="#4ecdc4" font-size="10">③ 执行工具</text>
+      <!-- YES label -->
+      <text x="555" y="230" fill="#576574" font-size="9" transform="rotate(45 555 230)">YES</text>
+
+      <!-- Node 4: Format -->
+      <rect x="110" y="380" width="190" height="50" rx="4" fill="#16213e" stroke="#0f3460" stroke-width="3"/>
+      <text x="205" y="402" text-anchor="middle" fill="#c8d6e5" font-size="9">④ 格式化结果</text>
+      <text x="205" y="420" text-anchor="middle" fill="#c8d6e5" font-size="9">回传 LLM</text>
+
+      <!-- Node 5: Evaluator -->
+      <rect x="40" y="220" width="180" height="50" rx="4" fill="#16213e" stroke="#e94560" stroke-width="3"/>
+      <text x="130" y="242" text-anchor="middle" fill="#e94560" font-size="9">⑤ EVALUATOR</text>
+      <text x="130" y="258" text-anchor="middle" fill="#e94560" font-size="9">三层刹车</text>
+
+      <!-- Small arrows along the circle indicating flow direction -->
+      <!-- From ① to ② -->
+      <polygon points="415,148 405,138 405,158" fill="#4ecdc4"/>
+      <!-- From ② (YES) to ③ -->
+      <polygon points="480,338 470,328 490,328" fill="#4ecdc4"/>
+      <!-- From ③ to ④ -->
+      <polygon points="295,400 305,390 305,410" fill="#0f3460"/>
+      <!-- From ④ to ⑤ -->
+      <polygon points="135,378 125,368 145,368" fill="#0f3460"/>
+      <!-- From ⑤ back to ① -->
+      <polygon points="215,82 225,72 225,92" fill="#e94560"/>
+
+      <!-- Center label -->
+      <text x="300" y="255" text-anchor="middle" fill="#576574" font-size="10">AGENT</text>
+      <text x="300" y="275" text-anchor="middle" fill="#576574" font-size="10">LOOP</text>
+    </svg>
+  </div>
+</section>
+
+<!-- Slide 12: Summary -->
+<section class="slide" id="s12">
+  <h2>// 四步演进总结</h2>
+  <div class="pixel-box">
+    <table class="pixel-table">
+      <tr><th>VER</th><th>新增</th><th>能力</th><th>代码量</th></tr>
+      <tr>
+        <td><span style="color:var(--accent);">v1</span></td>
+        <td>for + LLM 调用</td>
+        <td><span class="tag fail">只能说话</span></td>
+        <td>~20 行</td>
+      </tr>
+      <tr>
+        <td><span style="color:var(--accent);">v2</span></td>
+        <td>tools + executor</td>
+        <td><span class="tag new">能做事</span></td>
+        <td>~80 行</td>
+      </tr>
+      <tr>
+        <td><span style="color:var(--accent);">v3</span></td>
+        <td>Evaluator</td>
+        <td><span class="tag new">会停止</span></td>
+        <td>~110 行</td>
+      </tr>
+      <tr>
+        <td><span style="color:var(--accent);">v4</span></td>
+        <td>Observation 格式化</td>
+        <td><span class="tag ok">完整 Agent</span></td>
+        <td>~150 行</td>
+      </tr>
+    </table>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+    <div class="progress-block filled"></div>
+  </div>
+</section>
+
+<!-- Slide 13: Next -->
+<section class="slide" id="s13">
+  <h2>// 下一课预告</h2>
+  <div class="pixel-box">
+    <p style="font-size:22px; margin-bottom:20px;">
+      同样的任务，用 LangChain <span style="color:var(--green);">create_agent()</span> 只需 5 行。
+    </p>
+    <p style="font-size:22px; margin-bottom:20px;">
+      但是 ——
+    </p>
+    <table class="pixel-table">
+      <tr><th>指标</th><th>手写</th><th>框架</th><th>差距</th></tr>
+      <tr><td>System Prompt</td><td>264 字符</td><td>7,909 字符</td><td style="color:var(--accent);">30×</td></tr>
+      <tr><td>Input Tokens</td><td>2,508</td><td>77,671</td><td style="color:var(--accent);">31×</td></tr>
+      <tr><td>轮次</td><td>3</td><td>10</td><td style="color:var(--accent);">3.3×</td></tr>
+    </table>
+    <p style="font-size:20px; margin-top:20px; color:var(--dim);">
+      框架帮你省掉了什么？又偷偷加了什么？
+    </p>
+  </div>
+  <p style="text-align:center; margin-top:30px; color:var(--green); font-family:'Press Start 2P'; font-size:12px;">
+    TO BE CONTINUED...
+  </p>
+</section>
+
+<!-- Navigation -->
+<div class="nav">
+  <button class="nav-btn" onclick="prevSlide()">← PREV</button>
+  <button class="nav-btn" onclick="nextSlide()">NEXT →</button>
+</div>
+<div class="slide-counter" id="counter">01 / 14</div>
+
+<script>
+let current = 0;
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+
+function showSlide(n) {
+  slides[current].classList.remove('active');
+  current = (n + total) % total;
+  slides[current].classList.add('active');
+  document.getElementById('counter').textContent =
+    String(current + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+}
+
+function nextSlide() { showSlide(current + 1); }
+function prevSlide() { showSlide(current - 1); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+});
+
+// Touch swipe support
+let touchStartX = 0;
+document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+document.addEventListener('touchend', (e) => {
+  const diff = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(diff) > 50) { diff > 0 ? prevSlide() : nextSlide(); }
+});
+</script>
+</body>
+</html>

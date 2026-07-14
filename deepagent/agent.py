@@ -44,23 +44,61 @@ from shared.utils.sandbox import SANDBOX_DIR
 from shared.tracker.run_logger import RunLog
 from tasks.task_base import Task
 
-# 方案 A：把沙箱绝对路径显式注入 prompt，消除"当前工作目录（sandbox/）"这一
-# 误导性表述（它让模型把 /sandbox/ 当成文件系统根，详见
-# docs/findings/2026-07-08-deepagent-native-only-tools.md 根因 #1）。
-# 统一要求"完整绝对路径"——这是唯一能同时满足 handroll（绝对路径透传）
-# 和 deepagent 内置工具（从项目根解析）的指令。
-_SANDBOX_ABS = str(SANDBOX_DIR).replace("\\", "/")
+from langchain_core.callbacks import BaseCallbackHandler
 
-DEEP_AGENT_SYSTEM_PROMPT = f"""你是一个 Code Agent。你可以调用工具来完成任务。
+
+class _SystemPromptCapture(BaseCallbackHandler):
+    """拦截模型调用，捕获 deepagents 运行时拼接的完整 system prompt。
+    只在第一次 on_chat_model_start 时捕获（后续调用的 prompt 相同）。"""
+
+    def __init__(self) -> None:
+        self.captured: str = ""
+
+    def on_chat_model_start(self, serialized, messages, **kwargs):
+        if self.captured:
+            return  # 只捕第一次
+        for msg_list in messages:
+            for msg in msg_list:
+                if getattr(msg, "type", "") == "system":
+                    content = msg.content
+                    if isinstance(content, list):
+                        # SystemMessage with content_blocks
+                        texts = [
+                            b.get("text", "")
+                            for b in content
+                            if isinstance(b, dict) and b.get("type") == "text"
+                        ]
+                        self.captured = "\n".join(texts)
+                    else:
+                        self.captured = str(content)
+                    return
+
+# 方案 A（v2）：虚拟路径模式。
+#
+# deepagents 的 FilesystemMiddleware 在中间件层调 validate_path()，
+# 硬性拒绝所有 Windows 绝对路径（正则 ^[a-zA-Z]:）。所以不能给模型
+# 看 Windows 绝对路径，否则 write_file / ls / read_file 全部报错。
+#
+# 正确做法：用 virtual_mode=True 的 LocalShellBackend，把 sandbox 目录
+# 作为虚拟根。模型看到的文件路径是 /hello.py、/foo/bar.py 等 POSIX
+# 虚拟路径，框架内部映射到 {root_dir}/hello.py = sandbox/hello.py。
+# execute 工具的 cwd 同样是 sandbox，所以 shell 命令也用相对路径。
+#
+# 两路 prompt 保持完全一致（单一变量纪律）。
+
+DEEP_AGENT_SYSTEM_PROMPT = """你是一个 Code Agent。你可以调用工具来完成任务。
 策略（ReAct）：
 1. 思考任务下一步该做什么
 2. 如有必要，调用一个或多个工具
 3. 观察工具结果
 4. 重复直至任务完成，然后给出最终答案
 
-所有文件操作都针对沙箱工作目录，该目录的绝对路径是：
-{_SANDBOX_ABS}
-读写文件时请使用基于该绝对路径的完整路径（例如 {_SANDBOX_ABS}/hello.py）。"""
+所有文件操作都针对你的工作目录（虚拟根）。
+文件路径请使用 POSIX 虚拟路径，以 / 开头，例如：
+- /hello.py 表示工作目录下的 hello.py
+- /scripts/run.py 表示工作目录下 scripts/run.py
+
+执行 shell 命令时，当前工作目录已经是工作目录，直接用文件名即可（如 python hello.py）。"""
 
 
 def build_agent():
@@ -87,8 +125,8 @@ def build_agent():
         # 而非确定性失败的问题）。
         backend=LocalShellBackend(
             root_dir=str(SANDBOX_DIR),
-            virtual_mode=False,
-            inherit_env=True,  # 让 PATH 上的 python 等命令对 agent 可见
+            virtual_mode=True,  # 虚拟根模式：模型看到 /hello.py，框架映射到 sandbox/hello.py
+            inherit_env=True,   # 让 PATH 上的 python 等命令对 agent 可见
         ),
     )
 
@@ -99,15 +137,18 @@ def _ingest_event(
     in_tok: int,
     out_tok: int,
     final_text: str,
-) -> tuple[int, int, str]:
+) -> tuple[int, int, str, int]:
     """从 LangGraph stream_mode='updates' 事件中提取信息。
-    返回更新后的 (in_tok, out_tok, final_text)。"""
+    返回更新后的 (in_tok, out_tok, final_text, llm_calls)。
+    llm_calls = AIMessage 数量，用于与 handroll 的 loop_turns 对齐口径。"""
+    llm_calls = 0
     for _node_name, state in event.items():
         messages = state.get("messages", []) if isinstance(state, dict) else []
         for msg in messages:
             msg_type = getattr(msg, "type", "") or msg.__class__.__name__
             if msg_type == "ai":
                 # AIMessage: 提取 content / tool_calls / usage
+                llm_calls += 1
                 content = getattr(msg, "content", "") or ""
                 if isinstance(content, str) and content.strip():
                     final_text = content
@@ -118,12 +159,44 @@ def _ingest_event(
                 for tc in tool_calls:
                     name = tc.get("name", "<unknown>")
                     args = tc.get("args", {}) or {}
-                    run_log.log_tool_call(name, args, {"ok": True, "duration_s": 0.0})
+                    tc_id = tc.get("id", "")
+                    # 先记一条"待确认"记录；ToolMessage 到达时用真实结果回写
+                    run_log.tool_calls.append({
+                        "name": name,
+                        "input": args,
+                        "ok": True,  # 估计值，待 ToolMessage 校正
+                        "duration_s": 0.0,
+                        "exit_code": None,
+                        "_tool_call_id": tc_id,
+                        "_pending": True,
+                    })
                     rprint(f"[yellow]→ deepagent tool: {name}({args})[/yellow]")
             elif msg_type == "tool":
-                # ToolMessage: 工具结果。若 log_tool_call 时 ok=True 是估计值，这里可校正
-                pass
-    return in_tok, out_tok, final_text
+                # ToolMessage: 工具真实执行结果（status / content）
+                # 回写之前 AIMessage 阶段记录的"待确认"条目
+                content = getattr(msg, "content", "") or ""
+                tc_id = getattr(msg, "tool_call_id", None) or ""
+                status = getattr(msg, "status", "success")  # "success" | "error"
+                is_ok = (status != "error")
+                # 从尾部向前找匹配的 pending 记录
+                for recorded in reversed(run_log.tool_calls):
+                    if recorded.get("_tool_call_id") == tc_id and recorded.get("_pending"):
+                        recorded["ok"] = is_ok
+                        recorded["_pending"] = False
+                        recorded["output_preview"] = content[:500]
+                        if not is_ok:
+                            rprint(f"[red]✗ tool failed: {recorded['name']} — {content[:120]}[/red]")
+                        break
+    return in_tok, out_tok, final_text, llm_calls
+
+
+def _cleanup_internal_fields(run_log: RunLog) -> None:
+    """清除 tool_calls 中的内部追踪字段（_tool_call_id / _pending），
+    这些字段仅用于 AIMessage → ToolMessage 的关联匹配，不应出现在最终 JSON 中。"""
+    _INTERNAL_KEYS = ("_tool_call_id", "_pending")
+    for tc in run_log.tool_calls:
+        for key in _INTERNAL_KEYS:
+            tc.pop(key, None)
 
 
 def run(task: Task) -> RunLog:
@@ -132,41 +205,47 @@ def run(task: Task) -> RunLog:
         agent_type="deepagent",
         planner_strategy="react",
     )
-    run_log.notes.append("loop_turns 是 LangGraph 节点更新次数，非严格 LLM 调用次数")
+    run_log.notes.append("loop_turns 与 handroll 对齐口径：LLM 调用次数（AIMessage 数量）")
     run_log.notes.append("write_todos 调用计入了 tool_calls（如发生）")
 
+    prompt_capture = _SystemPromptCapture()
     agent = build_agent()
     start = time.time()
     in_tok_total = 0
     out_tok_total = 0
     final_text = ""
-    turn_count = 0
+    llm_call_count = 0  # 与 handroll loop_turns 对齐：LLM 调用次数
 
     try:
         for event in agent.stream(
             {"messages": [{"role": "user", "content": task.prompt}]},
             stream_mode="updates",
+            config={"callbacks": [prompt_capture]},
         ):
-            turn_count += 1
-            in_tok_total, out_tok_total, final_text = _ingest_event(
+            in_tok_total, out_tok_total, final_text, llm_calls = _ingest_event(
                 event, run_log, in_tok_total, out_tok_total, final_text
             )
+            llm_call_count += llm_calls
     except Exception as e:
         run_log.notes.append(f"runtime_error: {type(e).__name__}: {e}")
+        run_log.system_prompt = prompt_capture.captured
+        _cleanup_internal_fields(run_log)
         run_log.finish(success=False, stop_reason="error", final_answer=final_text)
-        run_log.loop_turns = turn_count
+        run_log.loop_turns = llm_call_count
         run_log.total_input_tokens = in_tok_total
         run_log.total_output_tokens = out_tok_total
         run_log.duration_s = round(time.time() - start, 3)
         run_log.save()
         return run_log
 
-    run_log.loop_turns = turn_count
+    run_log.system_prompt = prompt_capture.captured
+    run_log.loop_turns = llm_call_count
     run_log.total_input_tokens = in_tok_total
     run_log.total_output_tokens = out_tok_total
     if in_tok_total == 0:
         run_log.notes.append("token_usage_unavailable（模型未返回 usage）")
     run_log.duration_s = round(time.time() - start, 3)
+    _cleanup_internal_fields(run_log)
     run_log.finish(
         success=task.success_criterion(final_text),
         stop_reason="task_complete",

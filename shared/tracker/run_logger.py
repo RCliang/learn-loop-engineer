@@ -32,6 +32,7 @@ class RunLog:
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     events: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    system_prompt: str = ""  # 模型实际收到的完整 system prompt（用于实验复现和对比分析）
 
     def log_tool_call(self, name: str, input: dict, result: dict) -> None:
         self.tool_calls.append({
