@@ -1,0 +1,408 @@
+/* Chapter 2 · v1-bare — 最小循环：能想，不能做
+   类前缀 .bl- 物理隔离。颜色/字体全走 token。 */
+
+.bl-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 转场标题 ─── */
+.bl-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.bl-title-kicker {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: bl-fade-up 320ms steps(6, end) both;
+}
+.bl-title-q {
+  font-family: var(--font-body);
+  font-size: 64px;
+  color: var(--text-2);
+  animation: bl-fade-up 360ms steps(6, end) 120ms both;
+}
+.bl-title-em {
+  font-family: var(--font-display-cn);
+  font-size: 80px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: bl-fade-up 360ms steps(6, end) 260ms both;
+}
+.bl-title-cursor {
+  width: 16px;
+  height: 32px;
+  background: var(--accent);
+  margin-top: 8px;
+  box-shadow: 0 0 12px var(--accent-glow);
+  animation: bl-blink 0.8s steps(2, end) infinite;
+}
+
+/* ─── step 1 · 循环 hero ─── */
+.bl-loop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.bl-loop-glyph {
+  width: 240px;
+  height: 240px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 16px var(--accent-glow));
+  animation: bl-spin 4.2s steps(24, end) infinite;
+}
+.bl-loop-glyph-label {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  fill: var(--text-2);
+}
+.bl-loop-text {
+  font-family: var(--font-body);
+  font-size: 80px;
+  color: var(--text);
+  animation: bl-fade-up 360ms steps(6, end) 200ms both;
+}
+.bl-loop-hl {
+  font-family: var(--font-display-cn);
+  color: var(--accent);
+  padding: 0 16px;
+  border: 4px solid var(--accent);
+  background: var(--accent-soft);
+  text-shadow: 0 0 12px var(--accent-glow);
+  margin-left: 8px;
+}
+.bl-loop-sub {
+  font-family: var(--font-body);
+  font-size: 36px;
+  color: var(--text-mute);
+  letter-spacing: 0.1em;
+  animation: bl-fade-up 320ms steps(6, end) 420ms both;
+}
+
+/* ─── step 2 / 3 · 代码逐行揭示 ─── */
+.bl-code {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 1344px;
+  gap: 22px;
+}
+.bl-code-label {
+  display: flex;
+  align-items: baseline;
+  gap: 24px;
+  animation: bl-fade-up 320ms steps(6, end) both;
+}
+.bl-code-file {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--mint);
+  letter-spacing: 0.08em;
+}
+.bl-code-tagline {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.bl-code-block {
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  padding: 32px 36px;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+  overflow-x: auto;
+}
+.bl-codeline {
+  display: flex;
+  gap: 24px;
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.7;
+  opacity: 0;
+  transform: translateX(-16px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end);
+}
+.bl-codeline.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.bl-codeline[data-tag="for"] .bl-codeline-code { color: var(--accent); }
+.bl-codeline[data-tag="resp"] .bl-codeline-code { color: var(--mint); }
+.bl-codeline[data-tag="reply"] .bl-codeline-code { color: var(--amber); }
+.bl-codeline[data-tag="append"] .bl-codeline-code { color: var(--text); }
+.bl-codeline-no {
+  color: var(--text-faint);
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.bl-codeline-code {
+  color: var(--text-2);
+  white-space: pre;
+}
+
+/* ─── step 4 · 文件角标 ─── */
+.bl-fileinfo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.bl-fileinfo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 48px 72px;
+  background: var(--surface-2);
+  border: 4px solid var(--mint);
+  box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(78, 205, 196, 0.12);
+  animation: bl-pop 420ms steps(8, end) both;
+}
+.bl-fileinfo-name {
+  font-family: var(--font-mono);
+  font-size: 56px;
+  color: var(--mint);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+}
+.bl-fileinfo-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-body);
+  font-size: 40px;
+}
+.bl-fileinfo-key {
+  color: var(--text);
+}
+.bl-fileinfo-sep {
+  color: var(--text-faint);
+}
+.bl-fileinfo-status {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-display-cn);
+}
+.bl-fileinfo-ok {
+  color: var(--mint);
+}
+.bl-fileinfo-slash {
+  color: var(--text-faint);
+}
+.bl-fileinfo-bad {
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ─── step 5 · 终端跑空 ─── */
+.bl-trun {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.bl-trun-term {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  animation: bl-fade-up 320ms steps(6, end) both;
+}
+.bl-trun-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--surface-3);
+  background: var(--surface-3);
+}
+.bl-trun-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+}
+.bl-trun-r { background: var(--accent); }
+.bl-trun-y { background: var(--amber); }
+.bl-trun-g { background: var(--mint); }
+.bl-trun-title {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.bl-trun-body {
+  padding: 28px 32px 36px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.6;
+  min-height: 420px;
+}
+.bl-trun-cmd {
+  color: var(--text);
+  animation: bl-fade-up 280ms steps(6, end) both;
+}
+.bl-trun-divider {
+  margin: 16px 0 8px;
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+  animation: bl-slide-in 280ms steps(5, end) both;
+}
+.bl-trun-llm {
+  color: var(--text-2);
+  padding-left: 28px;
+  animation: bl-slide-in 320ms steps(6, end) both;
+}
+.bl-trun-empty {
+  color: var(--text-mute);
+  padding-left: 28px;
+  margin-top: 14px;
+  font-size: 24px;
+  animation: bl-fade-up 320ms steps(6, end) both;
+}
+.bl-trun-flag {
+  margin-top: 16px;
+  color: var(--accent);
+  font-family: var(--font-display-en);
+  font-size: 34px;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 16px var(--accent-glow);
+  animation: bl-pop 420ms steps(8, end) both;
+}
+
+/* ─── step 6 · 椅子+门比喻 ─── */
+.bl-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.bl-meta-scene {
+  display: flex;
+  align-items: flex-end;
+  gap: 80px;
+  animation: bl-fade-up 360ms steps(6, end) both;
+}
+.bl-meta-door {
+  width: 150px;
+  height: 200px;
+  color: var(--amber);
+  filter: drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.3));
+}
+.bl-meta-chair {
+  width: 200px;
+  height: 220px;
+  color: var(--mint);
+  filter: drop-shadow(4px 4px 0 rgba(0, 0, 0, 0.3));
+}
+.bl-meta-bubble {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  fill: var(--text-2);
+}
+.bl-meta-quote {
+  animation: bl-fade-up 320ms steps(6, end) 200ms both;
+}
+.bl-meta-q {
+  font-family: var(--font-display-cn);
+  font-size: 44px;
+  color: var(--text-2);
+}
+.bl-meta-punch {
+  font-family: var(--font-display-cn);
+  font-size: 56px;
+  color: var(--text);
+  animation: bl-fade-up 360ms steps(6, end) 420ms both;
+}
+.bl-meta-hl {
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+  margin-left: 8px;
+}
+
+/* ─── step 7 · 结论：手 ─── */
+.bl-hands {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.bl-hands-label {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: bl-fade-up 320ms steps(6, end) both;
+}
+.bl-hands-line {
+  font-family: var(--font-display-cn);
+  font-size: 72px;
+  color: var(--text);
+  animation: bl-fade-up 360ms steps(6, end) 160ms both;
+}
+.bl-hands-hl {
+  font-family: var(--font-display-cn);
+  font-size: 96px;
+  color: var(--accent);
+  padding: 0 20px;
+  border: 4px solid var(--accent);
+  background: var(--accent-soft);
+  text-shadow: 0 0 16px var(--accent-glow);
+  margin-left: 12px;
+}
+.bl-hands-glyph {
+  width: 160px;
+  height: 180px;
+  color: var(--mint);
+  filter: drop-shadow(0 0 12px rgba(78, 205, 196, 0.35));
+  animation: bl-wave 1.6s steps(8, end) infinite;
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes bl-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bl-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes bl-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes bl-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes bl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes bl-wave {
+  0%, 100% { transform: rotate(-6deg); }
+  50%      { transform: rotate(8deg); }
+}

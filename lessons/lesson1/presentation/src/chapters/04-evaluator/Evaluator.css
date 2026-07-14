@@ -1,0 +1,574 @@
+/* Chapter 4 · v3-evaluator — 装上刹车：Evaluator 三层
+   类前缀 .ve- 物理隔离。颜色/字体全走 token。 */
+
+.ve-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · hero 金句 ─── */
+.ve-quote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.ve-quote-kicker {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-quote-main {
+  font-family: var(--font-body);
+  font-size: 56px;
+  color: var(--text-2);
+  animation: ve-fade-up 360ms steps(6, end) 140ms both;
+}
+.ve-quote-strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 4px;
+  color: var(--text-faint);
+}
+.ve-quote-em {
+  font-family: var(--font-display-cn);
+  font-size: 76px;
+  color: var(--text);
+  animation: ve-fade-up 360ms steps(6, end) 300ms both;
+}
+.ve-quote-hl {
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+  margin-left: 12px;
+}
+
+/* ─── 通用 · 终端 ─── */
+.ve-term-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--surface-3);
+  background: var(--surface-3);
+}
+.ve-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+}
+.ve-dot-r { background: var(--accent); }
+.ve-dot-y { background: var(--amber); }
+.ve-dot-g { background: var(--mint); }
+.ve-term-title {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.ve-term-body {
+  padding: 24px 30px 30px;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  line-height: 1.55;
+  min-height: 420px;
+}
+.ve-term-cmd { color: var(--text); }
+.ve-term-divider {
+  margin: 10px 0 6px;
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+}
+.ve-term-tool {
+  color: var(--mint);
+  padding-left: 20px;
+}
+.ve-term-tag {
+  font-family: var(--font-display-en);
+  font-size: 12px;
+  padding: 4px 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  margin-right: 10px;
+}
+.ve-term-res { padding-left: 20px; }
+.ve-term-fail { color: var(--accent); }
+
+/* ─── step 1 · 死循环终端 ─── */
+.ve-infloop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.ve-infloop-term {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-infloop-turn {
+  animation: ve-slide-in 240ms steps(5, end) both;
+}
+.ve-infloop-more {
+  color: var(--accent);
+  text-align: center;
+  margin-top: 16px;
+  font-size: 28px;
+  letter-spacing: 0.2em;
+  animation: ve-blink 0.8s steps(2, end) infinite;
+}
+.ve-infloop-cost {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+.ve-infloop-cost-label {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.ve-infloop-cost-num {
+  font-size: 96px;
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* ─── step 2 · 标题 ─── */
+.ve-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.ve-title-kicker {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-title-main {
+  font-family: var(--font-body);
+  font-size: 64px;
+  color: var(--text-2);
+  animation: ve-fade-up 320ms steps(6, end) 120ms both;
+}
+.ve-title-em {
+  font-family: var(--font-display-cn);
+  font-size: 120px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: ve-fade-up 360ms steps(6, end) 260ms both;
+}
+
+/* ─── 通用 · 刹车条 ─── */
+.ve-brake {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  width: 1100px;
+  padding: 32px 44px;
+  background: var(--surface-2);
+  border: 4px solid var(--mint);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(78, 205, 196, 0.1);
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-brake.is-todo {
+  border-color: var(--text-faint);
+  border-style: dashed;
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.25);
+  opacity: 0.65;
+}
+.ve-brake-n {
+  font-family: var(--font-display-en);
+  font-size: 96px;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent-glow);
+  line-height: 0.8;
+}
+.is-todo .ve-brake-n { color: var(--text-faint); text-shadow: none; }
+.ve-brake-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.ve-brake-name {
+  font-family: var(--font-display-cn);
+  font-size: 52px;
+  color: var(--text);
+}
+.is-todo .ve-brake-name { color: var(--text-2); }
+.ve-brake-desc {
+  font-family: var(--font-body);
+  font-size: 30px;
+  color: var(--text-mute);
+}
+.ve-brake-tag {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  padding: 12px 20px;
+  border: 3px dashed var(--text-faint);
+  color: var(--text-mute);
+  letter-spacing: 0.15em;
+}
+
+/* ─── step 3/5 · 刹车 + 代码 ─── */
+.ve-brake-show {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+.ve-brake-code {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  padding: 30px 40px;
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.ve-codeline {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.8;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end);
+  white-space: pre;
+}
+.ve-codeline.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.ve-codeline[data-tag="cmt"] .ve-codeline-code { color: var(--text-faint); }
+.ve-codeline[data-tag="if"] .ve-codeline-code { color: var(--accent); }
+.ve-codeline[data-tag="ret"] .ve-codeline-code { color: var(--mint); }
+.ve-codeline[data-tag="run"] .ve-codeline-code { color: var(--text); }
+.ve-codeline-code { color: var(--text-2); }
+
+/* ─── step 4 · 刹车 2 场景 ─── */
+.ve-brake2-scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  animation: ve-fade-up 360ms steps(6, end) 200ms both;
+}
+.ve-repeat {
+  width: 320px;
+  height: 130px;
+  color: var(--mint);
+  filter: drop-shadow(0 0 12px rgba(78, 205, 196, 0.25));
+}
+.ve-repeat-label {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  fill: var(--text-2);
+  font-weight: 700;
+}
+.ve-brake2-label {
+  font-family: var(--font-display-cn);
+  font-size: 44px;
+  color: var(--text);
+}
+.ve-brake2-label .ve-brake2-x {
+  color: var(--accent);
+}
+
+/* ─── step 5 · 刹车 2 代码 ─── */
+.ve-b2code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.ve-b2code-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-b2code-note {
+  font-family: var(--font-display-cn);
+  font-size: 44px;
+  color: var(--text);
+  animation: ve-fade-up 360ms steps(6, end) 600ms both;
+}
+.ve-b2code-hl {
+  color: var(--accent);
+  font-size: 56px;
+  text-shadow: 0 0 16px var(--accent-glow);
+  margin: 0 8px;
+}
+
+/* ─── step 6 · 刹车 3（虚化）─── */
+.ve-b3-pseudo {
+  width: 1344px;
+  background: #000;
+  border: 4px dashed var(--text-faint);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.25);
+  padding: 30px 40px;
+  min-height: 180px;
+  opacity: 0.6;
+  animation: ve-fade-up 320ms steps(6, end) 200ms both;
+}
+.ve-b3-line {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.8;
+  color: var(--text-faint);
+}
+.ve-b3-todo { color: var(--text-faint); font-style: italic; }
+
+/* ─── step 7 · 可靠性对比 ─── */
+.ve-relia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+.ve-relia-q {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-relia-scale {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+  animation: ve-fade-up 360ms steps(6, end) 200ms both;
+}
+.ve-relia-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 48px;
+  border: 4px solid var(--surface-3);
+}
+.ve-relia-wrong {
+  border-color: var(--text-faint);
+  opacity: 0.6;
+}
+.ve-relia-right {
+  border-color: var(--mint);
+  background: rgba(78, 205, 196, 0.06);
+  box-shadow: 0 0 24px rgba(78, 205, 196, 0.12);
+}
+.ve-relia-x {
+  font-family: var(--font-display-en);
+  font-size: 80px;
+  color: var(--text-faint);
+}
+.ve-relia-ok {
+  font-family: var(--font-display-en);
+  font-size: 80px;
+  color: var(--mint);
+  text-shadow: 0 0 20px rgba(78, 205, 196, 0.5);
+}
+.ve-relia-txt {
+  font-family: var(--font-display-cn);
+  font-size: 40px;
+  color: var(--text);
+}
+.ve-relia-vs {
+  font-family: var(--font-display-en);
+  font-size: 80px;
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+.ve-relia-punch {
+  font-family: var(--font-display-cn);
+  font-size: 52px;
+  color: var(--text-2);
+  animation: ve-fade-up 360ms steps(6, end) 460ms both;
+}
+
+/* ─── step 8 · 死循环重来 ─── */
+.ve-cured {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+.ve-cured-label {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ve-fade-up 320ms steps(6, end) both;
+}
+.ve-cured-row {
+  display: flex;
+  gap: 40px;
+}
+.ve-cured-turn {
+  width: 320px;
+  padding: 28px 32px;
+  background: var(--surface-2);
+  border: 4px solid var(--surface-3);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end),
+              border-color 320ms steps(6, end);
+}
+.ve-cured-turn.is-up {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ve-cured-turn.is-hit {
+  border-color: var(--accent);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--accent-glow);
+}
+.ve-cured-n {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  color: var(--text-faint);
+  letter-spacing: 0.15em;
+}
+.ve-cured-tool {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--mint);
+}
+.ve-cured-res {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  color: var(--accent);
+}
+.ve-cured-flag {
+  margin-top: 8px;
+  font-family: var(--font-display-en);
+  font-size: 28px;
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent-glow);
+  animation: ve-pop 320ms steps(6, end) both;
+}
+.ve-cured-note {
+  font-family: var(--font-display-cn);
+  font-size: 44px;
+  color: var(--text);
+  animation: ve-fade-up 360ms steps(6, end) 1400ms both;
+}
+
+/* ─── step 9 · 截断 ─── */
+.ve-cutoff {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+.ve-cutoff-red {
+  font-family: var(--font-display-en);
+  font-size: 72px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 24px var(--accent-glow);
+  padding: 20px 40px;
+  border: 4px solid var(--accent);
+  background: var(--accent-soft);
+  animation: ve-pop 420ms steps(8, end) both;
+}
+.ve-cutoff-text {
+  font-family: var(--font-display-cn);
+  font-size: 48px;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.4;
+  animation: ve-fade-up 360ms steps(6, end) 300ms both;
+}
+.ve-cutoff-hl {
+  color: var(--mint);
+  text-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+}
+
+/* ─── step 10 · 文件角标 ─── */
+.ve-fileinfo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.ve-fileinfo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 48px 72px;
+  background: var(--surface-2);
+  border: 4px solid var(--mint);
+  box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.35), 0 0 24px rgba(78, 205, 196, 0.12);
+  animation: ve-pop 420ms steps(8, end) both;
+}
+.ve-fileinfo-name {
+  font-family: var(--font-mono);
+  font-size: 52px;
+  color: var(--mint);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+}
+.ve-fileinfo-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-body);
+  font-size: 40px;
+}
+.ve-fileinfo-key { color: var(--text); }
+.ve-fileinfo-sep { color: var(--text-faint); }
+.ve-fileinfo-status {
+  color: var(--mint);
+  font-family: var(--font-display-cn);
+  text-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes ve-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ve-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes ve-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes ve-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; }
+}

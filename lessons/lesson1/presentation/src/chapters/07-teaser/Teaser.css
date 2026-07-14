@@ -1,0 +1,283 @@
+/* Chapter 7 · teaser — 思考题 + 下集预告
+   类前缀 .ts- 物理隔离。颜色/字体全走 token。 */
+
+.ts-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 思考题 150 vs 5 ─── */
+.ts-puzzle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+.ts-puzzle-label {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: ts-fade-up 320ms steps(6, end) both;
+}
+.ts-puzzle-row {
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+.ts-puzzle-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px 56px;
+  border: 4px solid var(--surface-3);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.35);
+}
+.ts-puzzle-handroll {
+  border-color: var(--mint);
+  background: rgba(78, 205, 196, 0.06);
+  animation: ts-fade-up 360ms steps(6, end) 120ms both;
+}
+.ts-puzzle-langchain {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.35), 0 0 28px var(--accent-glow);
+  animation: ts-fade-up 360ms steps(6, end) 320ms both;
+}
+.ts-puzzle-num {
+  font-size: 160px;
+  line-height: 0.85;
+}
+.ts-puzzle-handroll .ts-puzzle-num {
+  color: var(--mint);
+  text-shadow: 0 0 24px rgba(78, 205, 196, 0.4), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+.ts-puzzle-langchain .ts-puzzle-num {
+  color: var(--accent);
+  text-shadow: 0 0 28px var(--accent-glow), 4px 4px 0 rgba(0, 0, 0, 0.3);
+}
+.ts-puzzle-unit {
+  font-family: var(--font-body);
+  font-size: 32px;
+  color: var(--text);
+}
+.ts-puzzle-lc {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+.ts-puzzle-fn {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  color: var(--text-mute);
+}
+.ts-puzzle-vs {
+  font-family: var(--font-display-en);
+  font-size: 56px;
+  color: var(--text-faint);
+  animation: ts-fade-up 320ms steps(6, end) 220ms both;
+}
+
+/* ─── step 1 · 金句 ─── */
+.ts-golden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.ts-golden-q1,
+.ts-golden-q2 {
+  font-family: var(--font-display-cn);
+  font-size: 76px;
+  color: var(--text);
+}
+.ts-golden-q1 {
+  animation: ts-fade-up 360ms steps(6, end) both;
+}
+.ts-golden-q2 {
+  animation: ts-fade-up 360ms steps(6, end) 280ms both;
+}
+.ts-golden-hl {
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+  margin-left: 8px;
+}
+.ts-golden-hl2 {
+  color: var(--amber);
+  text-shadow: 0 0 20px rgba(249, 202, 36, 0.4);
+  margin-left: 8px;
+}
+
+/* ─── step 2 · 对比表 ─── */
+.ts-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 1344px;
+  align-items: center;
+}
+.ts-compare-head {
+  display: grid;
+  grid-template-columns: 1fr 200px 240px 160px;
+  width: 100%;
+  padding: 0 40px;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  animation: ts-fade-up 320ms steps(6, end) both;
+}
+.ts-crow {
+  display: grid;
+  grid-template-columns: 1fr 200px 240px 160px;
+  align-items: center;
+  width: 100%;
+  padding: 26px 40px;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  border: 4px solid var(--surface-3);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 360ms steps(6, end), transform 360ms steps(6, end);
+}
+.ts-crow.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.ts-cd-metric {
+  font-family: var(--font-body);
+  font-size: 34px;
+  color: var(--text);
+}
+.ts-cd-hand {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--mint);
+}
+.ts-cd-frame {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--text-2);
+}
+.ts-cd-ratio {
+  font-size: 56px;
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+  text-align: right;
+}
+.ts-compare-note {
+  font-family: var(--font-display-cn);
+  font-size: 40px;
+  color: var(--text-2);
+  margin-top: 16px;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: opacity 360ms steps(6, end), transform 360ms steps(6, end);
+}
+.ts-compare-note.is-up {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ts-compare-same {
+  color: var(--mint);
+  font-size: 52px;
+  text-shadow: 0 0 16px rgba(78, 205, 196, 0.4);
+  margin-left: 8px;
+}
+
+/* ─── step 3 · 下集预告 ─── */
+.ts-next {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.ts-next-tag {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  padding: 12px 28px;
+  border: 3px dashed var(--text-faint);
+  animation: ts-fade-up 320ms steps(6, end) both;
+}
+.ts-next-main {
+  font-family: var(--font-display-cn);
+  font-size: 68px;
+  color: var(--text);
+  animation: ts-fade-up 360ms steps(6, end) 160ms both;
+}
+.ts-next-cost {
+  font-family: var(--font-display-cn);
+  font-size: 80px;
+  color: var(--text-2);
+  animation: ts-fade-up 360ms steps(6, end) 360ms both;
+}
+.ts-next-hl {
+  color: var(--accent);
+  text-shadow: 0 0 28px var(--accent-glow);
+}
+
+/* ─── step 4 · CTA ─── */
+.ts-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.ts-cta-path {
+  font-family: var(--font-mono);
+  font-size: 44px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  animation: ts-fade-up 320ms steps(6, end) both;
+}
+.ts-cta-bracket {
+  color: var(--text-faint);
+}
+.ts-cta-repo {
+  color: var(--mint);
+}
+.ts-cta-sep {
+  color: var(--text-faint);
+}
+.ts-cta-dir {
+  color: var(--text);
+}
+.ts-cta-files {
+  font-family: var(--font-mono);
+  font-size: 52px;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 16px var(--accent-glow);
+  animation: ts-fade-up 360ms steps(6, end) 160ms both;
+}
+.ts-cta-action {
+  font-family: var(--font-display-cn);
+  font-size: 48px;
+  color: var(--text-2);
+  animation: ts-fade-up 320ms steps(6, end) 320ms both;
+}
+.ts-cta-bye {
+  font-family: var(--font-display-cn);
+  font-size: 72px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  margin-top: 12px;
+  animation: ts-fade-up 360ms steps(6, end) 480ms both;
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes ts-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,231 @@
+/* Chapter 6 · recap — 四步演进总览
+   类前缀 .rc- 物理隔离。颜色/字体全走 token。 */
+
+.rc-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 标题 ─── */
+.rc-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.rc-title-kicker {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: rc-fade-up 320ms steps(6, end) both;
+}
+.rc-title-main {
+  font-family: var(--font-body);
+  font-size: 56px;
+  color: var(--text-2);
+  animation: rc-fade-up 320ms steps(6, end) 120ms both;
+}
+.rc-title-em {
+  font-family: var(--font-display-cn);
+  font-size: 96px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: rc-fade-up 360ms steps(6, end) 260ms both;
+}
+
+/* ─── step 1~4 · 版本表 ─── */
+.rc-table {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 1344px;
+}
+.rc-table-head {
+  display: grid;
+  grid-template-columns: 180px 1fr 320px 200px;
+  padding: 0 40px;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  animation: rc-fade-up 320ms steps(6, end) both;
+}
+.rc-row {
+  display: grid;
+  grid-template-columns: 180px 1fr 320px 200px;
+  align-items: center;
+  padding: 28px 40px;
+  background: var(--surface-2);
+  border: 4px solid var(--surface-3);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateX(-24px);
+  transition: opacity 360ms steps(6, end), transform 360ms steps(6, end),
+              border-color 360ms steps(6, end);
+}
+.rc-row.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.rc-row.is-past {
+  opacity: 0.45;
+}
+.rc-row.is-current {
+  border-color: var(--accent);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3), 0 0 24px var(--accent-glow);
+}
+.rc-row[data-color="mint"].is-current { border-color: var(--mint); }
+.rc-row[data-color="amber"].is-current { border-color: var(--amber); }
+.rc-td-v {
+  font-family: var(--font-display-en);
+  font-size: 48px;
+  color: var(--text);
+}
+.is-current .rc-td-v { color: var(--accent); }
+.rc-row[data-color="mint"].is-current .rc-td-v { color: var(--mint); }
+.rc-row[data-color="amber"].is-current .rc-td-v { color: var(--amber); }
+.rc-td-add {
+  font-family: var(--font-body);
+  font-size: 34px;
+  color: var(--text);
+}
+.rc-td-tag {
+  font-family: var(--font-display-cn);
+  font-size: 34px;
+  color: var(--accent);
+}
+.rc-row[data-color="mint"] .rc-td-tag { color: var(--mint); }
+.rc-row[data-color="amber"] .rc-td-tag { color: var(--amber); }
+.rc-row[data-color="text-faint"] .rc-td-tag { color: var(--text-mute); }
+.rc-td-tagsub { color: var(--text-faint); font-size: 28px; }
+.rc-td-lines {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--text-mute);
+  text-align: right;
+}
+
+/* ─── step 5 · hero 150 ─── */
+.rc-hero150 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.rc-hero150-kicker {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: rc-fade-up 320ms steps(6, end) both;
+}
+.rc-hero150-num {
+  font-size: 300px;
+  color: var(--accent);
+  text-shadow: 0 0 36px var(--accent-glow), 8px 8px 0 rgba(0, 0, 0, 0.35);
+  line-height: 0.85;
+}
+.rc-hero150-unit {
+  font-family: var(--font-body);
+  font-size: 48px;
+  color: var(--text);
+  letter-spacing: 0.1em;
+  animation: rc-fade-up 320ms steps(6, end) 400ms both;
+}
+
+/* ─── step 6 · 5 节点环形图 ─── */
+.rc-ring {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.rc-ring-svg {
+  width: 720px;
+  height: 720px;
+}
+.rc-ring-line {
+  stroke: var(--text-faint);
+  stroke-width: 3;
+  stroke-dasharray: 8 8;
+  opacity: 0.4;
+  transition: stroke 320ms steps(6, end), opacity 320ms steps(6, end);
+}
+.rc-ring-line.is-lit {
+  stroke: var(--mint);
+  opacity: 1;
+}
+.rc-ring-node circle {
+  fill: var(--surface-2);
+  stroke: var(--text-faint);
+  stroke-width: 4;
+  opacity: 0.5;
+  transition: stroke 320ms steps(6, end), fill 320ms steps(6, end), opacity 320ms steps(6, end);
+}
+.rc-ring-node.is-lit circle {
+  fill: var(--surface-3);
+  stroke: var(--mint);
+  opacity: 1;
+}
+.rc-ring-node-n {
+  font-family: var(--font-display-en);
+  font-size: 32px;
+  fill: var(--text-faint);
+  font-weight: 700;
+  transition: fill 320ms steps(6, end);
+}
+.rc-ring-node.is-lit .rc-ring-node-n {
+  fill: var(--accent);
+}
+.rc-ring-node-label {
+  font-family: var(--font-body);
+  font-size: 18px;
+  fill: var(--text-mute);
+  transition: fill 320ms steps(6, end);
+}
+.rc-ring-node.is-lit .rc-ring-node-label {
+  fill: var(--text);
+}
+.rc-ring-center {
+  font-family: var(--font-display-cn);
+  font-size: 28px;
+  fill: var(--text-2);
+}
+
+/* ─── step 7 · 过渡 ─── */
+.rc-trans {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.rc-trans-q {
+  font-family: var(--font-display-cn);
+  font-size: 80px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: rc-fade-up 360ms steps(6, end) both;
+}
+.rc-trans-cursor {
+  width: 18px;
+  height: 36px;
+  background: var(--accent);
+  box-shadow: 0 0 14px var(--accent-glow);
+  animation: rc-blink 0.8s steps(2, end) infinite;
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes rc-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes rc-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}

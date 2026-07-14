@@ -1,0 +1,385 @@
+/* Chapter 5 · v4-observation — 看得懂结果：Observation 格式化
+   类前缀 .vo- 物理隔离。颜色/字体全走 token。 */
+
+.vo-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 标题 ─── */
+.vo-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.vo-title-kicker {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-title-em {
+  font-family: var(--font-display-cn);
+  font-size: 96px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: vo-fade-up 360ms steps(6, end) 140ms both;
+}
+.vo-title-sub {
+  font-family: var(--font-body);
+  font-size: 44px;
+  color: var(--text-2);
+  letter-spacing: 0.15em;
+  animation: vo-fade-up 320ms steps(6, end) 300ms both;
+}
+
+/* ─── step 1 · 问题抛出 ─── */
+.vo-q {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vo-q-label {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-q-main {
+  font-family: var(--font-display-cn);
+  font-size: 72px;
+  color: var(--text);
+  animation: vo-fade-up 360ms steps(6, end) 160ms both;
+}
+.vo-q-hl {
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent-glow);
+  margin-left: 12px;
+}
+
+/* ─── step 2/3 · 原始 JSON ─── */
+.vo-raw {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.vo-raw-label {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-raw-label.is-fail { color: var(--accent); }
+.vo-raw-block {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--text-faint);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.35);
+  padding: 36px 40px;
+  animation: vo-fade-up 360ms steps(6, end) 160ms both;
+}
+.vo-raw-json {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  line-height: 1.7;
+  color: var(--text-2);
+  word-break: break-all;
+  display: block;
+}
+.vo-raw-note {
+  font-family: var(--font-body);
+  font-size: 36px;
+  color: var(--text-mute);
+  animation: vo-fade-up 320ms steps(6, end) 400ms both;
+}
+
+/* ─── step 4 · 转场 ─── */
+.vo-trans {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vo-trans-arrow {
+  font-family: var(--font-display-en);
+  font-size: 80px;
+  color: var(--mint);
+  animation: vo-blink 1s steps(2, end) infinite;
+}
+.vo-trans-text {
+  font-family: var(--font-display-cn);
+  font-size: 64px;
+  color: var(--text);
+  animation: vo-fade-up 320ms steps(6, end) 200ms both;
+}
+
+/* ─── step 5 · 格式化后 ─── */
+.vo-fmt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.vo-fmt-label {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-fmt-line {
+  width: 1344px;
+  padding: 36px 44px;
+  background: #000;
+  border: 4px solid var(--mint);
+  box-shadow: 0 0 32px rgba(78, 205, 196, 0.15), 10px 10px 0 rgba(0, 0, 0, 0.4);
+  font-family: var(--font-mono);
+  font-size: 40px;
+  color: var(--text);
+  opacity: 0;
+  transform: scale(0.9);
+  transition: opacity 360ms steps(8, end), transform 360ms steps(8, end);
+}
+.vo-fmt-line.is-up {
+  opacity: 1;
+  transform: scale(1);
+}
+.vo-fmt-tag {
+  color: var(--accent);
+  font-weight: 700;
+}
+.vo-fmt-note {
+  font-family: var(--font-body);
+  font-size: 34px;
+  color: var(--text-mute);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: vo-fade-up 360ms steps(6, end) 500ms both;
+}
+.vo-fmt-ok {
+  color: var(--mint);
+  font-family: var(--font-display-cn);
+  font-size: 40px;
+}
+.vo-fmt-sep { color: var(--text-faint); }
+
+/* ─── 通用 · 代码块 ─── */
+.vo-codeblock {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  padding: 30px 40px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.vo-codeline {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  line-height: 1.75;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end);
+  white-space: pre;
+}
+.vo-codeline.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.vo-codeline[data-tag="def"] .vo-codeline-code { color: var(--accent); }
+.vo-codeline[data-tag="if"] .vo-codeline-code { color: var(--amber); }
+.vo-codeline[data-tag="ret"] .vo-codeline-code { color: var(--mint); }
+.vo-codeline-code { color: var(--text-2); }
+
+/* ─── step 6 · format 代码 ─── */
+.vo-fcode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vo-fcode-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+
+/* ─── step 7 · 金句 ─── */
+.vo-golden {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.vo-golden-not {
+  font-family: var(--font-body);
+  font-size: 48px;
+  color: var(--text-2);
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-golden-strike {
+  text-decoration: line-through;
+  text-decoration-thickness: 4px;
+  color: var(--text-faint);
+}
+.vo-golden-em {
+  font-family: var(--font-display-cn);
+  font-size: 64px;
+  color: var(--text);
+  text-align: center;
+  animation: vo-fade-up 360ms steps(6, end) 240ms both;
+}
+.vo-golden-hl {
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+}
+
+/* ─── step 8 · 预告角标 ─── */
+.vo-teaser {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+.vo-teaser-tag {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  padding: 10px 24px;
+  border: 3px dashed var(--text-faint);
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-teaser-main {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  animation: vo-fade-up 360ms steps(6, end) 200ms both;
+}
+.vo-teaser-a {
+  font-family: var(--font-mono);
+  font-size: 60px;
+  color: var(--mint);
+}
+.vo-teaser-vs {
+  font-family: var(--font-display-en);
+  font-size: 44px;
+  color: var(--text-faint);
+}
+.vo-teaser-b {
+  font-family: var(--font-mono);
+  font-size: 60px;
+  color: var(--text-2);
+}
+.vo-teaser-note {
+  font-family: var(--font-body);
+  font-size: 34px;
+  color: var(--text-mute);
+  animation: vo-fade-up 320ms steps(6, end) 440ms both;
+}
+
+/* ─── step 9 · file_read 角标 ─── */
+.vo-fr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.vo-fr-tag {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vo-fade-up 320ms steps(6, end) both;
+}
+.vo-fr-name {
+  font-family: var(--font-mono);
+  font-size: 80px;
+  color: var(--mint);
+  text-shadow: 0 0 20px rgba(78, 205, 196, 0.35);
+  animation: vo-fade-up 360ms steps(6, end) 140ms both;
+}
+.vo-fr-desc {
+  font-family: var(--font-body);
+  font-size: 38px;
+  color: var(--text-2);
+  animation: vo-fade-up 320ms steps(6, end) 300ms both;
+}
+
+/* ─── step 10 · 文件角标 ─── */
+.vo-fileinfo {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.vo-fileinfo-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 48px 72px;
+  background: var(--surface-2);
+  border: 4px solid var(--accent);
+  box-shadow: 12px 12px 0 rgba(0, 0, 0, 0.35), 0 0 28px var(--accent-glow);
+  animation: vo-pop 420ms steps(8, end) both;
+}
+.vo-fileinfo-name {
+  font-family: var(--font-mono);
+  font-size: 56px;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+.vo-fileinfo-line {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-family: var(--font-body);
+  font-size: 40px;
+}
+.vo-fileinfo-key { color: var(--text); }
+.vo-fileinfo-sep { color: var(--text-faint); }
+.vo-fileinfo-status {
+  color: var(--mint);
+  font-family: var(--font-display-cn);
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes vo-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vo-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes vo-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; }
+}

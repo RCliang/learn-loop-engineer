@@ -1,0 +1,536 @@
+/* Chapter 3 · v2-tools — 给 Agent 装上手：工具三件事
+   类前缀 .vt- 物理隔离。颜色/字体全走 token。 */
+
+.vt-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 转场标题 ─── */
+.vt-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.vt-title-kicker {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-title-q {
+  font-family: var(--font-body);
+  font-size: 52px;
+  color: var(--text-2);
+  animation: vt-fade-up 320ms steps(6, end) 120ms both;
+}
+.vt-title-arrow {
+  font-family: var(--font-display-en);
+  font-size: 48px;
+  color: var(--mint);
+  animation: vt-blink 1s steps(2, end) infinite;
+}
+.vt-title-em {
+  font-family: var(--font-display-cn);
+  font-size: 88px;
+  color: var(--accent);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: vt-fade-up 360ms steps(6, end) 280ms both;
+}
+
+/* ─── step 1 · 三件事总览 ─── */
+.vt-overview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+.vt-overview-label {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 80%;
+  max-width: 900px;
+}
+.vt-thing {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 26px 36px;
+  background: var(--surface-2);
+  border: 4px solid var(--surface-3);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transform: translateX(-20px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end),
+              border-color 320ms steps(6, end);
+}
+.vt-thing.is-up {
+  opacity: 1;
+  transform: translateX(0);
+  border-color: var(--mint);
+}
+.vt-thing-n {
+  font-family: var(--font-display-en);
+  font-size: 64px;
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+.vt-thing-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vt-thing-title {
+  font-family: var(--font-display-cn);
+  font-size: 40px;
+  color: var(--text);
+}
+.vt-thing-sub {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  color: var(--text-mute);
+  letter-spacing: 0.08em;
+}
+
+/* ─── step 2/6/7 · 单件事高亮 ─── */
+.vt-hi {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+.vt-hi-thing {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  animation: vt-fade-up 360ms steps(6, end) both;
+}
+.vt-hi-n {
+  font-family: var(--font-display-en);
+  font-size: 140px;
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow);
+  line-height: 0.8;
+}
+.vt-hi-text {
+  font-family: var(--font-display-cn);
+  font-size: 64px;
+  color: var(--text);
+  padding: 16px 28px;
+  border: 4px solid var(--accent);
+  background: var(--accent-soft);
+}
+.vt-hi-list {
+  display: flex;
+  gap: 48px;
+}
+.vt-hi-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--font-body);
+  font-size: 28px;
+  color: var(--text-faint);
+  padding: 12px 20px;
+  border: 2px solid transparent;
+  transition: color 320ms steps(6, end), border-color 320ms steps(6, end);
+}
+.vt-hi-row.is-done {
+  color: var(--mint);
+}
+.vt-hi-row.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.vt-hi-row-n {
+  font-family: var(--font-display-en);
+  font-size: 36px;
+}
+.vt-hi-row-t {
+  letter-spacing: 0.04em;
+}
+
+/* ─── 通用 · 代码块 ─── */
+.vt-codeblock {
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  padding: 30px 40px;
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 1344px;
+  box-sizing: border-box;
+}
+.vt-codeblock--sm {
+  width: 1344px;
+  min-height: 260px;
+}
+.vt-codeline {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  line-height: 1.75;
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end);
+  white-space: pre;
+  overflow-x: auto;
+}
+.vt-codeline.is-up {
+  opacity: 1;
+  transform: translateX(0);
+}
+.vt-codeline[data-tag="def"] .vt-codeline-code { color: var(--accent); }
+.vt-codeline[data-tag="key"] .vt-codeline-code { color: var(--text-2); }
+.vt-codeline[data-tag="name"] .vt-codeline-code { color: var(--mint); }
+.vt-codeline[data-tag="desc"] .vt-codeline-code { color: var(--amber); }
+.vt-codeline[data-tag="if"] .vt-codeline-code { color: var(--accent); }
+.vt-codeline[data-tag="run"] .vt-codeline-code { color: var(--text); }
+.vt-codeline[data-tag="ret"] .vt-codeline-code { color: var(--mint); }
+.vt-codeline[data-tag="do"] .vt-codeline-code { color: var(--mint); }
+.vt-codeline[data-tag="cmt"] .vt-codeline-code { color: var(--text-faint); }
+.vt-codeline-code {
+  color: var(--text-2);
+}
+
+/* ─── step 3 · 工具定义 ─── */
+.vt-tdef {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vt-tdef-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+
+/* ─── step 4 · 两个工具卡并列 ─── */
+.vt-twotools {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+}
+.vt-twotools-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-twotools-row {
+  display: flex;
+  gap: 56px;
+}
+.vt-tcard {
+  width: 440px;
+  padding: 32px 36px;
+  background: var(--surface-2);
+  border: 4px solid var(--surface-3);
+  box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 360ms steps(6, end), transform 360ms steps(6, end),
+              border-color 360ms steps(6, end);
+}
+.vt-tcard.is-up {
+  opacity: 1;
+  transform: translateY(0);
+  border-color: var(--mint);
+}
+.vt-tcard-name {
+  font-family: var(--font-mono);
+  font-size: 40px;
+  color: var(--mint);
+  text-shadow: 0 0 12px rgba(78, 205, 196, 0.3);
+}
+.vt-tcard-desc {
+  font-family: var(--font-body);
+  font-size: 26px;
+  color: var(--text);
+  padding: 14px 18px;
+  background: var(--surface-3);
+  border-left: 4px solid var(--amber);
+}
+.vt-tcard-params {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vt-tcard-param {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  color: var(--text-2);
+}
+
+/* ─── step 5 · description 金句 ─── */
+.vt-quote {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+.vt-quote-frame {
+  padding: 28px 44px;
+  background: #000;
+  border: 4px solid var(--amber);
+  box-shadow: 0 0 32px rgba(249, 202, 36, 0.18), 10px 10px 0 rgba(0, 0, 0, 0.4);
+  animation: vt-pop 420ms steps(8, end) both;
+}
+.vt-quote-field {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  color: var(--amber);
+}
+.vt-quote-val {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  color: var(--text);
+  margin-top: 8px;
+}
+.vt-quote-punch {
+  font-family: var(--font-display-cn);
+  font-size: 48px;
+  color: var(--text-2);
+  text-align: center;
+  line-height: 1.4;
+  animation: vt-fade-up 360ms steps(6, end) 240ms both;
+}
+.vt-quote-hl {
+  color: var(--accent);
+  font-size: 72px;
+  text-shadow: 0 0 20px var(--accent-glow);
+}
+
+/* ─── step 8/9 · 执行器代码 ─── */
+.vt-exec {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.vt-exec-label {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.2em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+
+/* ─── step 10 · 完成判断 ─── */
+.vt-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+}
+.vt-done-label {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-done-note {
+  font-family: var(--font-display-cn);
+  font-size: 52px;
+  color: var(--text);
+  animation: vt-fade-up 360ms steps(6, end) 420ms both;
+}
+.vt-done-eq {
+  font-family: var(--font-display-en);
+  font-size: 64px;
+  color: var(--accent);
+  padding: 0 20px;
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* ─── step 11 · 终端跑 v2 ─── */
+.vt-trun {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.vt-trun-term {
+  width: 1344px;
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-trun-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--surface-3);
+  background: var(--surface-3);
+}
+.vt-trun-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+}
+.vt-trun-r { background: var(--accent); }
+.vt-trun-y { background: var(--amber); }
+.vt-trun-g { background: var(--mint); }
+.vt-trun-title {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.vt-trun-body {
+  padding: 26px 32px 32px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.6;
+  min-height: 440px;
+}
+.vt-trun-cmd {
+  color: var(--text);
+}
+.vt-trun-turn {
+  margin: 16px 0 8px;
+  color: var(--text-faint);
+  letter-spacing: 0.2em;
+  animation: vt-slide-in 280ms steps(5, end) both;
+}
+.vt-trun-tool {
+  color: var(--mint);
+  padding-left: 24px;
+  animation: vt-slide-in 320ms steps(6, end) both;
+}
+.vt-trun-tag {
+  font-family: var(--font-display-en);
+  font-size: 13px;
+  padding: 5px 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  letter-spacing: 1px;
+  margin-right: 12px;
+}
+.vt-trun-res {
+  padding-left: 24px;
+  margin: 4px 0;
+  animation: vt-slide-in 280ms steps(5, end) both;
+}
+.vt-trun-ok { color: var(--mint); }
+.vt-trun-out { color: var(--text); font-weight: 700; }
+.vt-trun-done {
+  margin-top: 8px;
+  color: var(--mint);
+  font-size: 32px;
+  font-family: var(--font-display-en);
+  text-shadow: 0 0 12px rgba(78, 205, 196, 0.5);
+  animation: vt-pop 420ms steps(8, end) both;
+}
+.vt-trun-flag {
+  margin-top: 24px;
+  color: var(--accent);
+  font-family: var(--font-display-cn);
+  font-size: 44px;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 20px var(--accent-glow);
+  animation: vt-pop 420ms steps(8, end) both;
+}
+
+/* ─── step 12 · 隐患引子 ─── */
+.vt-pitfall {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+.vt-pitfall-q {
+  font-family: var(--font-mono);
+  font-size: 30px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: vt-fade-up 320ms steps(6, end) both;
+}
+.vt-pitfall-glyph {
+  width: 220px;
+  height: 220px;
+  color: var(--accent);
+  filter: drop-shadow(0 0 16px var(--accent-glow));
+  animation: vt-spin 2.4s steps(16, end) infinite;
+}
+.vt-pitfall-glyph-label {
+  font-family: var(--font-body);
+  font-size: 20px;
+  fill: var(--text-2);
+}
+.vt-pitfall-text {
+  font-family: var(--font-display-cn);
+  font-size: 56px;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.4;
+  animation: vt-fade-up 360ms steps(6, end) 280ms both;
+}
+.vt-pitfall-hl {
+  color: var(--accent);
+  text-shadow: 0 0 16px var(--accent-glow);
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes vt-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vt-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes vt-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes vt-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.2; }
+}
+@keyframes vt-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

@@ -1,0 +1,321 @@
+/* Chapter 1 · coldopen — 像素 CRT 终端演出
+   类前缀 .co- 物理隔离。颜色/字体全走 token。 */
+
+.co-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── step 0 · 钩子 ─── */
+.co-hook {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  animation: co-fade-up 320ms steps(6, end) both;
+}
+.co-hook-blink {
+  width: 18px;
+  height: 36px;
+  background: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+  animation: co-blink 0.9s steps(2, end) infinite;
+}
+.co-hook-text {
+  font-family: var(--font-display-en);
+  font-size: 96px;
+  letter-spacing: 2px;
+  color: var(--text);
+  text-shadow: 4px 4px 0 var(--accent-glow);
+}
+.co-hook-sub {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  animation: co-pulse 1.4s steps(4, end) infinite;
+}
+
+/* ─── step 1~3 · 终端 ─── */
+.co-term-wrap {
+  width: 1344px;
+  animation: co-fade-up 320ms steps(6, end) both;
+}
+.co-term {
+  background: #000;
+  border: 4px solid var(--surface-3);
+  box-shadow:
+    inset 0 0 0 2px #000,
+    inset 0 0 0 4px var(--surface-3),
+    12px 12px 0 rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+.co-term-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 2px solid var(--surface-3);
+  background: var(--surface-3);
+}
+.co-dot {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #000;
+}
+.co-dot-r { background: var(--accent); }
+.co-dot-y { background: var(--amber); }
+.co-dot-g { background: var(--mint); }
+.co-term-title {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+}
+.co-term-body {
+  padding: 28px 32px 36px;
+  font-family: var(--font-mono);
+  font-size: 26px;
+  line-height: 1.55;
+  color: var(--text-2);
+  min-height: 420px;
+}
+.co-line { margin: 6px 0; }
+.co-line-input { color: var(--text); }
+.co-prompt { color: var(--mint); margin-right: 8px; }
+.co-type { color: var(--text); }
+.co-caret {
+  display: inline-block;
+  width: 12px;
+  height: 24px;
+  background: var(--mint);
+  margin-left: 4px;
+  vertical-align: -4px;
+  animation: co-blink 0.8s steps(2, end) infinite;
+}
+.co-divider {
+  margin: 18px 0 10px;
+  color: var(--text-faint);
+  font-size: 22px;
+  letter-spacing: 0.2em;
+}
+.co-think { color: var(--text-2); margin-bottom: 12px; }
+.co-tool {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 6px 0;
+  animation: co-slide-in 320ms steps(6, end) both;
+}
+.co-tool-tag {
+  font-family: var(--font-display-en);
+  font-size: 12px;
+  padding: 6px 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 2px solid var(--accent);
+  letter-spacing: 1px;
+}
+.co-tool-name {
+  color: var(--amber);
+  font-size: 30px;
+}
+.co-arg {
+  color: var(--text-2);
+  font-size: 22px;
+  padding-left: 28px;
+  margin: 4px 0 8px;
+  word-break: break-all;
+}
+.co-result { padding-left: 28px; margin: 4px 0; font-size: 24px; }
+.co-ok { color: var(--mint); animation: co-slide-in 280ms steps(5, end) both; }
+.co-out { color: var(--text); font-weight: 700; }
+.co-done {
+  margin-top: 8px;
+  color: var(--mint);
+  font-size: 30px;
+  font-family: var(--font-display-en);
+  letter-spacing: 1px;
+  text-shadow: 0 0 12px var(--mint);
+  animation: co-pop 420ms steps(8, end) both;
+}
+
+/* ─── step 4 · 数据条 ─── */
+.co-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 56px;
+}
+.co-stats-label {
+  font-family: var(--font-body);
+  font-size: 40px;
+  color: var(--text-2);
+  animation: co-fade-up 320ms steps(6, end) both;
+}
+.co-stats-row {
+  display: flex;
+  gap: 120px;
+  align-items: flex-end;
+}
+.co-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end);
+}
+.co-stat.is-shown { opacity: 1; transform: translateY(0); }
+.co-stat-num {
+  font-size: 200px;
+  color: var(--accent);
+  text-shadow: 0 0 24px var(--accent-glow), 6px 6px 0 rgba(0,0,0,0.3);
+}
+.co-stat-unit {
+  font-family: var(--font-body);
+  font-size: 34px;
+  color: var(--text);
+  letter-spacing: 0.08em;
+}
+
+/* ─── step 5 · hero 150 ─── */
+.co-hero150 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.co-hero150-kicker {
+  font-family: var(--font-mono);
+  font-size: 24px;
+  letter-spacing: 0.3em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: co-fade-up 320ms steps(6, end) both;
+}
+.co-hero150-num {
+  font-size: 280px;
+  color: var(--accent);
+  text-shadow: 0 0 32px var(--accent-glow), 8px 8px 0 rgba(0,0,0,0.35);
+  line-height: 0.85;
+}
+.co-hero150-unit {
+  font-family: var(--font-body);
+  font-size: 44px;
+  color: var(--text);
+  letter-spacing: 0.1em;
+  animation: co-fade-up 320ms steps(6, end) 120ms both;
+}
+
+/* ─── step 6 · 反差铺垫 ─── */
+.co-turn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+.co-turn-line {
+  font-family: var(--font-body);
+  font-size: 56px;
+  color: var(--text-2);
+  animation: co-fade-up 360ms steps(6, end) both;
+}
+.co-turn-em {
+  color: var(--accent);
+  font-size: 72px;
+  text-shadow: 4px 4px 0 var(--accent-glow);
+  animation: co-fade-up 360ms steps(6, end) 160ms both;
+}
+
+/* ─── step 7 · 框架名 + for 循环 ─── */
+.co-fw {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 48px;
+}
+.co-fw-label {
+  font-family: var(--font-mono);
+  font-size: 26px;
+  letter-spacing: 0.25em;
+  color: var(--text-mute);
+  text-transform: uppercase;
+  animation: co-fade-up 320ms steps(6, end) both;
+}
+.co-fw-names {
+  display: flex;
+  gap: 56px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.co-fw-name {
+  font-family: var(--font-display-en);
+  font-size: 52px;
+  padding: 22px 32px;
+  border: 4px solid var(--surface-3);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.3);
+  opacity: 0;
+  transform: translateY(20px) scale(0.92);
+  transition: opacity 320ms steps(6, end), transform 320ms steps(6, end),
+              color 320ms steps(6, end), border-color 320ms steps(6, end);
+}
+.co-fw-name.is-up {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  color: var(--mint);
+  border-color: var(--mint);
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.3), 0 0 24px rgba(78,205,196,0.15);
+}
+.co-fw-punch {
+  font-family: var(--font-body);
+  font-size: 56px;
+  color: var(--text-2);
+  text-align: center;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 420ms steps(8, end), transform 420ms steps(8, end);
+}
+.co-fw-punch.is-up { opacity: 1; transform: translateY(0); }
+.co-fw-for {
+  color: var(--accent);
+  font-family: var(--font-display-en);
+  font-size: 48px;
+  padding: 6px 16px;
+  border: 4px solid var(--accent);
+  background: var(--accent-soft);
+  text-shadow: 0 0 12px var(--accent-glow);
+  margin-left: 8px;
+  vertical-align: 4px;
+}
+
+/* ─── keyframes（arcade stepped，不用 spring）─── */
+@keyframes co-fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes co-slide-in {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes co-pop {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.12); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes co-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes co-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
